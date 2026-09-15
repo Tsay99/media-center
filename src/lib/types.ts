@@ -79,6 +79,7 @@ export type MonthPlan = {
   month: string;
   totals: Record<string, number>;
   products: Record<string, Record<string, number>>;
+  platforms?: Record<string, Record<string, number>>;
 };
 
 export type AppState = {

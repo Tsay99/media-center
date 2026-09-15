@@ -138,6 +138,16 @@ export const DEMO_STATE: AppState = {
         [product("FirstInLaw")]: { Reels: 2, Пост: 1 },
         [product("Корпоративный")]: { Reels: 2, Пост: 0 },
       },
+      platforms: {
+        [product("ТН")]: { Instagram: 2, TikTok: 1 },
+        [product("ТО")]: { Instagram: 2, TikTok: 1 },
+        [product("ФТК")]: { Instagram: 2, TikTok: 1 },
+        [product("УП")]: { Instagram: 1, TikTok: 1 },
+        [product("Prime")]: { Instagram: 1, TikTok: 1 },
+        [product("SapaControl")]: { Instagram: 4, TikTok: 2 },
+        [product("FirstInLaw")]: { Instagram: 2, TikTok: 1 },
+        [product("Корпоративный")]: { Instagram: 2 },
+      },
     },
   },
 };
@@ -147,5 +157,5 @@ export function cloneDemoState(): AppState {
 }
 
 export function getOrCreatePlan(state: AppState, month: string): MonthPlan {
-  return state.plans[month] ?? { month, totals: { Reels: 0, Пост: 0, Threads: 0, TikTok: 0, LinkedIn: 0, YouTube: 0 }, products: {} };
+  return state.plans[month] ?? { month, totals: { Reels: 0, Пост: 0, Threads: 0, TikTok: 0, LinkedIn: 0, YouTube: 0 }, products: {}, platforms: {} };
 }
