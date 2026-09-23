@@ -35,4 +35,4 @@ refactor(ui): extract shared page header
 test(distribution): cover reels limits
 ```
 
-Подробные команды и роли агентов находятся в `AGENTS.md` и `VIBE_CODING.md`.
+Полные команды и роли агентов находятся в `WORKFLOW.md`; `AGENTS.md` содержит ограничения, а `VIBE_CODING.md` — краткую шпаргалку.

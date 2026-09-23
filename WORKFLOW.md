@@ -40,6 +40,7 @@ feature branch → Pull Request → Vercel Preview → review/CI → merge в ma
 - `vercel --prod` разрешён только для аварийного восстановления или rollback, когда Git Integration недоступен.
 - `.env.local`, токены, пароли, service-role ключи и персональные credentials не коммитятся.
 - Preview не считается релизом, пока не проверены пользовательский сценарий, CI и риски.
+- Для repo-задач использовать терминал и GitHub/Vercel-интеграции; не применять Computer Use, браузерную автоматизацию, Playwright или Selenium без отдельного запроса.
 
 ## 3. Жизненный цикл задачи
 
