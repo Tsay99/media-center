@@ -1,5 +1,7 @@
 # Рабочий процесс vibe coding
 
+Полные правила находятся в WORKFLOW.md, приоритеты — в ROADMAP.md.
+
 Проект развивается через маленькие проверяемые изменения. Главный агент координирует архитектуру и review, а параллельные агенты работают в отдельных worktree и ветках.
 
 ```text
@@ -12,7 +14,8 @@
 
 ```powershell
 git fetch origin
-git worktree add ..\media-center-calendar -b codex/calendar-filters main
+git merge --ff-only origin/main
+git worktree add ..\media-center-calendar -b codex/calendar-filters origin/main
 ```
 
 После завершения:
