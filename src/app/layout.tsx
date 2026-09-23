@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Контент план факт",
-  description: "Управление контент-производством SMM менеджера",
+  title: "Медиа Центр",
+  description: "Медиа-центр By Tsay Maxim",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

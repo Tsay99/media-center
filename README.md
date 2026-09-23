@@ -1,4 +1,4 @@
-# Контент план факт
+# Медиа Центр
 
 Локальное веб-приложение для простого учета публикаций SMM-менеджера: общий дашборд по продуктам, отметки за сегодня, календарь публикаций и месячный план-факт по соцсетям.
 
@@ -13,7 +13,7 @@
 - Порядок продуктов и соцсетей меняется стрелками вверх/вниз.
 - Архивирование без удаления старой статистики.
 - XLSX-экспорт матрицы плана и списка публикаций.
-- Демо-данные хранятся локально в браузере через localStorage.
+- При заполненных переменных Supabase данные общей рабочей области синхронизируются между устройствами; localStorage остается локальным резервом.
 
 ## Стек
 
@@ -22,7 +22,7 @@ Next.js 16, App Router, TypeScript, Tailwind CSS, Lucide, date-fns, Zod, React H
 ## Запуск
 
 ```powershell
-cd D:\content-plan-fact
+cd D:\media-center
 npm install
 npm run dev
 ```
@@ -39,20 +39,21 @@ npm run build
 
 ## Данные и Supabase
 
-Сейчас приложение запускается без аккаунта и базы: данные сохраняются в localStorage текущего браузера. Для облачной версии и общего доступа нужно создать бесплатный проект Supabase, применить `database/001_initial_schema.sql`, затем создать `.env.local` на основе `.env.example`:
+Для общей версии создайте проект Supabase, в Authentication → Users создайте владельца с email и паролем `1431999`, замените `OWNER_EMAIL` в `database/002_shared_workspace.sql` на этот email и выполните миграции `database/001_initial_schema.sql` и `database/002_shared_workspace.sql` в SQL Editor. Затем создайте `.env.local` на основе `.env.example`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_OWNER_EMAIL=
 ```
 
-В браузер можно передавать только URL и anon key при включенном Row Level Security. Service role key не добавляйте в клиентский код.
+В браузер можно передавать только URL и publishable/anon key при включенном Row Level Security. `service_role`/secret key не добавляйте в клиентский код.
 
 Демо-данные можно удалить кнопкой очистки данных в будущей версии или очистив ключ `content-plan-fact-local-v1` в DevTools → Application → Local Storage.
 
-## Vercel позже
+## Vercel
 
-Deployment пока не выполняется. Для будущего deployment: подключить Git-репозиторий к Vercel, добавить две переменные Supabase в настройках проекта, применить миграцию в Supabase и запустить production build перед публикацией.
+Подключите Git-репозиторий к Vercel и добавьте те же три переменные Supabase в Project Settings → Environment Variables. После этого каждый production deploy будет собирать Next.js с общей базой.
 
 ## Структура
 
@@ -61,7 +62,8 @@ src/app/                         Next.js App Router и глобальные ст
 src/components/                 основной интерактивный интерфейс
 src/lib/types.ts                доменные типы и справочники
 src/lib/demo-data.ts            демо-данные и планы
-database/001_initial_schema.sql нормализованная Supabase-схема и RLS
+database/001_initial_schema.sql базовая нормализованная схема и RLS
+database/002_shared_workspace.sql общая рабочая область, Supabase Auth и публичное чтение
 ```
 
 ## Вторая версия

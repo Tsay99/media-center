@@ -26,6 +26,12 @@ export type ActivityType =
 export type Product = {
   id: string;
   name: string;
+  company?: string;
+  shortName?: string;
+  ownerName?: string;
+  whatsappNumber?: string;
+  instagramAccountUrl?: string;
+  color?: string;
   archived: boolean;
   order: number;
 };
@@ -33,13 +39,18 @@ export type Product = {
 export type Platform = {
   id: string;
   name: string;
+  shortName?: string;
+  accountUrl?: string;
+  color?: string;
   archived: boolean;
   order: number;
 };
 
 export type ContentItem = {
   id: string;
+  sourceContentId?: string;
   title: string;
+  brief?: string;
   productId: string;
   type: ContentType;
   description?: string;
@@ -49,6 +60,7 @@ export type ContentItem = {
   plannedShootTime?: string;
   actualShootDate?: string;
   plannedPublishDate?: string;
+  plannedPlatformId?: string;
   actualPublishDate?: string;
   location?: string;
   participants?: string;
@@ -80,6 +92,55 @@ export type MonthPlan = {
   totals: Record<string, number>;
   products: Record<string, Record<string, number>>;
   platforms?: Record<string, Record<string, number>>;
+  channels?: Record<string, Record<string, number>>;
+  weekdays?: Record<string, Record<string, number[]>>;
+};
+
+export type WorkloadBreakdown = {
+  organization: number;
+  shooting: number;
+  editing: number;
+  design: number;
+  publishing: number;
+};
+
+export type WorkloadSettings = {
+  capacityHours: number;
+  rates: Record<ContentType, WorkloadBreakdown>;
+};
+
+export type TaskStatus = "todo" | "in_progress" | "completed";
+export type TaskPriority = "low" | "medium" | "high";
+
+export type PersonalTask = {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate: string;
+  dueTime?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  ownerId?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SiteSettings = {
+  brandName: string;
+  brandTagline: string;
+  logoSrc?: string;
+  logoScale?: number;
+  logoContainerWidth?: number;
+  logoContainerHeight?: number;
+  logoContainerRadius?: number;
+  logoContainerPadding?: number;
+  logoSidebarHorizontalPadding?: number;
+  logoSidebarTopOffset?: number;
+  logoContainerBackground?: "transparent" | "white" | "sidebar";
+  guestViews: string[];
+  showSyncStatus: boolean;
+  showContact: boolean;
 };
 
 export type AppState = {
@@ -89,6 +150,8 @@ export type AppState = {
   publications: Publication[];
   activities: Activity[];
   plans: Record<string, MonthPlan>;
+  workload?: WorkloadSettings;
+  siteSettings?: SiteSettings;
 };
 
 export const CONTENT_TYPES: ContentType[] = [
