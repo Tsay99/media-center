@@ -278,7 +278,61 @@ export default function ContentPlanFactApp() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => { const stored = window.localStorage.getItem(STORAGE_KEY); if (stored) { try { setState(normalizeState(JSON.parse(stored) as AppState)); } catch { window.localStorage.removeItem(STORAGE_KEY); } } setHydrated(true); }, []);
   useEffect(() => { window.localStorage.removeItem("content-plan-fact-background-v1"); }, []);
-  useEffect(() => { let cancelled = false; async function hydrateAuthAndCloud() { const storedRole = window.sessionStorage.getItem(AUTH_STORAGE_KEY); if (!isSupabaseConfigured) { const nextRole: UserRole = storedRole === "owner" ? "owner" : storedRole === "designer" ? "designer" : "guest"; setRole(nextRole); window.sessionStorage.setItem(AUTH_STORAGE_KEY, nextRole); setView(nextRole === "designer" ? "calendar" : "dashboard"); setSyncState("local"); setAuthHydrated(true); return; } try { const [session, cloudState] = await Promise.all([getOwnerSession(), loadWorkspaceState()]); if (!cancelled) { const nextRole: UserRole = session ? "owner" : storedRole === "designer" ? "designer" : "guest"; setRole(nextRole); window.sessionStorage.setItem(AUTH_STORAGE_KEY, nextRole); setView(nextRole === "designer" ? "calendar" : "dashboard"); if (cloudState) setState(normalizeState(cloudState)); cloudLoadedRef.current = true; setSyncState(cloudState ? "synced" : "loading"); } } catch { if (!cancelled) { cloudLoadedRef.current = true; const nextRole: UserRole = storedRole === "designer" ? "designer" : "guest"; setRole(nextRole); window.sessionStorage.setItem(AUTH_STORAGE_KEY, nextRole); setView(nextRole === "designer" ? "calendar" : "dashboard"); setSyncState("error"); } } finally { if (!cancelled) setAuthHydrated(true); } } void hydrateAuthAndCloud(); return () => { cancelled = true; }; }, []);
+  useEffect(() => {
+    let cancelled = false;
+    async function hydrateAuthAndCloud() {
+      const storedRole = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
+      const localRole: UserRole = storedRole === "designer" ? "designer" : "guest";
+
+      if (!isSupabaseConfigured) {
+        setRole(storedRole === "owner" ? "owner" : localRole);
+        window.sessionStorage.setItem(AUTH_STORAGE_KEY, storedRole === "owner" ? "owner" : localRole);
+        setView(localRole === "designer" ? "calendar" : "dashboard");
+        setSyncState("local");
+        setAuthHydrated(true);
+        return;
+      }
+
+      setRole(localRole);
+      window.sessionStorage.setItem(AUTH_STORAGE_KEY, localRole);
+      setView(localRole === "designer" ? "calendar" : "dashboard");
+      setSyncState("loading");
+      setAuthHydrated(true);
+
+      const sessionPromise = getOwnerSession();
+      const cloudPromise = loadWorkspaceState();
+
+      try {
+        const session = await sessionPromise;
+        if (!cancelled && session) {
+          setRole("owner");
+          window.sessionStorage.setItem(AUTH_STORAGE_KEY, "owner");
+          setView("dashboard");
+        }
+      } catch {
+        // A cached guest view can still render while Supabase Auth recovers.
+      }
+
+      try {
+        const cloudState = await cloudPromise;
+        if (!cancelled) {
+          if (cloudState) setState(normalizeState(cloudState));
+          cloudLoadedRef.current = true;
+          setSyncState(cloudState ? "synced" : "loading");
+        }
+      } catch {
+        if (!cancelled) {
+          cloudLoadedRef.current = true;
+          setSyncState("error");
+        }
+      }
+    }
+
+    void hydrateAuthAndCloud();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   useEffect(() => { if (!hydrated || !authHydrated) return; let cancelled = false; async function hydrateTasks() { setTasksHydrated(false); tasksLocalFallbackRef.current = false; if (role !== "owner") { setTasks([]); setTasksHydrated(true); return; } try { if (isSupabaseConfigured) { setTasks(await loadPersonalTasks()); } else { const stored = window.localStorage.getItem(TASKS_STORAGE_KEY); setTasks(stored ? JSON.parse(stored) as PersonalTask[] : []); tasksLocalFallbackRef.current = true; } } catch { if (!cancelled) { const stored = window.localStorage.getItem(TASKS_STORAGE_KEY); setTasks(stored ? JSON.parse(stored) as PersonalTask[] : []); tasksLocalFallbackRef.current = true; setToast("Таблица задач ещё не применена — локальный режим для разработки"); } } finally { if (!cancelled) setTasksHydrated(true); } } void hydrateTasks(); return () => { cancelled = true; }; }, [hydrated, authHydrated, role]);
   /* eslint-enable react-hooks/set-state-in-effect */
   useEffect(() => { if (hydrated) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }, [state, hydrated]);

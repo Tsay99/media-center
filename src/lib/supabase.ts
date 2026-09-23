@@ -8,8 +8,10 @@ export const ownerEmail = process.env.NEXT_PUBLIC_OWNER_EMAIL?.trim() ?? "";
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl!, supabaseKey!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
+  ? createClient(supabaseUrl!, supabaseKey!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } })
   : null;
+
+const PERSONAL_TASK_COLUMNS = "id,title,description,due_date,due_time,status,priority,owner_id,completed_at,created_at,updated_at";
 
 export async function loadWorkspaceState(): Promise<AppState | null> {
   if (!supabase) return null;
@@ -62,7 +64,7 @@ function taskFromRow(row: Record<string, unknown>): PersonalTask {
 
 export async function loadPersonalTasks(): Promise<PersonalTask[]> {
   if (!supabase) return [];
-  const { data, error } = await supabase.from("personal_tasks").select("*").order("due_date", { ascending: true }).order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("personal_tasks").select(PERSONAL_TASK_COLUMNS).order("due_date", { ascending: true }).order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map((row) => taskFromRow(row as Record<string, unknown>));
 }
