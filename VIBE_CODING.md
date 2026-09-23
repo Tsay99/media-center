@@ -37,6 +37,12 @@ git diff --check
 
 GitHub — источник истины. Vercel Git Integration создаёт preview для pull request и production после merge в `main`. Прямой `vercel --prod` используйте только для аварийного восстановления или rollback.
 
-## Текущие ограничения
+## Текущее состояние интеграции
 
-Для завершения автоматической цепочки нужен GitHub remote и подключение репозитория к Vercel. До этого момента локальный Git-процесс и GitHub Actions уже подготовлены, но push и merge нельзя выполнить без адреса репозитория и доступа к нему.
+- GitHub remote: `https://github.com/Tsay99/media-center.git`.
+- Основная ветка: `main`; локальная ветка отслеживает `origin/main`.
+- Vercel-проект: `content-plan-fact` в команде `tsays-projects`.
+- GitHub-репозиторий подключён к Vercel Git Integration.
+- Production обновляется после merge/push в `main`; pull request получает отдельный Preview Deployment.
+
+Проверяйте подключение перед релизом в Vercel: в проекте должна отображаться отметка `Connected Git Repository`. Если Vercel запрашивает обновление разрешений GitHub App, подтвердите доступ к репозиторию `Tsay99/media-center`.

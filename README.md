@@ -53,7 +53,9 @@ NEXT_PUBLIC_OWNER_EMAIL=
 
 ## Vercel
 
-Подключите Git-репозиторий к Vercel и добавьте те же три переменные Supabase в Project Settings → Environment Variables. После этого каждый production deploy будет собирать Next.js с общей базой.
+Проект `content-plan-fact` подключён к GitHub-репозиторию `Tsay99/media-center`. GitHub — источник истины: Preview создаётся для pull request, а production — после merge в `main`. Вручную `vercel --prod` используйте только для аварийного восстановления или rollback.
+
+В Project Settings → Environment Variables должны быть добавлены те же три переменные Supabase для Production, Preview и Development. После этого каждый Git-деплой собирает Next.js с общей базой.
 
 ## Структура
 
