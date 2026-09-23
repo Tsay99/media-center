@@ -58,9 +58,9 @@ const NAV_ITEMS: { id: View; label: string; icon: typeof BarChart3 }[] = [
   { id: "calendar", label: "Календарь", icon: CalendarDays },
   { id: "tasks", label: "Задачи", icon: ClipboardList },
   { id: "load", label: "Нагрузка", icon: Gauge },
+  { id: "settings", label: "Настройки сайта", icon: Settings },
   { id: "plan", label: "Контент-план", icon: BarChart3 },
   { id: "directory", label: "Справочники", icon: Package },
-  { id: "settings", label: "Настройки сайта", icon: Settings },
 ];
 const GUEST_NAV_ORDER: View[] = ["dashboard", "calendar", "load"];
 const TASKS_STORAGE_KEY = "content-plan-fact-personal-tasks-v1";
@@ -157,7 +157,7 @@ function WorkspaceSidebar({ view, visibleNavItems, openView, role, siteSettings,
   const logoSidebarTopOffset = Math.min(32, Math.max(0, siteSettings.logoSidebarTopOffset ?? DEFAULT_SITE_SETTINGS.logoSidebarTopOffset ?? 22));
   const sidebarEdgeInset = 12;
   const navButtonClass = (active: boolean) => `flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition ${sidebarCollapsed ? "justify-center px-2" : ""} ${active ? "bg-blue-400/15 text-blue-100" : "text-white/55 hover:bg-white/[.07] hover:text-white"}`;
-  const primaryNavItems = sidebarCollapsed ? visibleNavItems : visibleNavItems.filter((item) => item.id !== "plan" && item.id !== "directory");
+  const primaryNavItems = visibleNavItems;
   return <aside onMouseEnter={() => { if (sidebarCollapsed) setSidebarCollapsed(false); }} onFocus={() => { if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col overflow-hidden border-r border-white/10 bg-[#0e1d35] px-3 py-3 text-white transition-[width,transform] duration-300 ease-in-out lg:translate-x-0 ${sidebarCollapsed ? "lg:w-16" : "lg:w-64"} ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
     <div className={`flex h-16 shrink-0 items-center border-b border-white/10 ${sidebarCollapsed ? "justify-center" : "justify-between"}`} style={sidebarCollapsed ? undefined : { paddingLeft: `${Math.max(0, logoSidebarHorizontalPadding - sidebarEdgeInset)}px`, paddingRight: `${Math.max(0, logoSidebarHorizontalPadding - sidebarEdgeInset)}px` }}>
       <button type="button" onClick={() => openView("dashboard")} aria-label="Открыть главную" className={`relative shrink-0 overflow-hidden transition hover:opacity-90 ${sidebarCollapsed ? "h-9 w-9 rounded-xl bg-gradient-to-br from-sky-400 to-violet-500" : logoContainerBackgroundClass(siteSettings.logoContainerBackground)}`} style={sidebarCollapsed ? undefined : { width: `${logoContainerWidth}px`, height: `${logoContainerHeight}px`, borderRadius: `${logoContainerRadius}px`, padding: `${logoContainerPadding}px`, transform: `translateY(${logoSidebarTopOffset - 22}px)` }}><Image src={siteSettings.logoSrc || DEFAULT_SITE_SETTINGS.logoSrc!} alt={siteSettings.brandName} width={216} height={80} priority style={{ transform: sidebarCollapsed ? undefined : `scale(${logoScale})` }} className={sidebarCollapsed ? "hidden" : "h-full w-full object-contain"} />{sidebarCollapsed && <span className="absolute inset-0 grid place-items-center text-lg font-bold text-white">{siteSettings.brandName.trim().charAt(0) || "М"}</span>}</button>
@@ -166,7 +166,6 @@ function WorkspaceSidebar({ view, visibleNavItems, openView, role, siteSettings,
     <div className={`mt-5 min-h-0 flex-1 overflow-y-auto ${sidebarCollapsed ? "px-0" : "px-1"}`}>
       {!sidebarCollapsed && <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[.16em] text-white/30">Рабочая панель</div>}
       <nav aria-label="Основная навигация" className="grid gap-1">{primaryNavItems.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} onClick={() => { openView(item.id); setMobileOpen(false); }} title={sidebarCollapsed ? item.label : undefined} className={navButtonClass(view === item.id)}><Icon size={17} /><span className={sidebarCollapsed ? "sr-only lg:hidden" : "truncate"}>{item.label}</span></button>; })}</nav>
-      {!sidebarCollapsed && <details className="mt-5 group"><summary className="flex h-9 cursor-pointer list-none items-center justify-between rounded-xl px-2 text-[10px] font-bold uppercase tracking-[.16em] text-white/30 transition hover:bg-white/[.05] hover:text-white/60 [&::-webkit-details-marker]:hidden"><span>Контент</span><ChevronRight size={14} className="transition group-open:rotate-90" /></summary><div className="mt-1 grid gap-1 pl-2"><button type="button" onClick={() => openView("plan")} className={navButtonClass(view === "plan")}><BarChart3 size={16} />Контент-план</button><button type="button" onClick={() => openView("directory")} className={navButtonClass(view === "directory")}><Package size={16} />Справочники</button></div></details>}
     </div>
     <div className={`shrink-0 border-t border-white/10 pt-3 ${sidebarCollapsed ? "px-0" : "px-1"}`}>
       {!sidebarCollapsed && <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[.16em] text-white/30">{role === "owner" ? "Максим Цай · Редактор" : role === "designer" ? "Есей · Дизайнер" : "Гость · Только просмотр"}</div>}
