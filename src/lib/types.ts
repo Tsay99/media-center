@@ -140,6 +140,9 @@ export type SiteSettings = {
   logoContainerBackground?: "transparent" | "white" | "sidebar";
   backgroundImage?: string;
   backgroundImages?: Record<string, string>;
+  backgroundOpacity?: number;
+  backgroundPositionX?: number;
+  backgroundPositionY?: number;
   guestViews: string[];
   showSyncStatus: boolean;
   showContact: boolean;
