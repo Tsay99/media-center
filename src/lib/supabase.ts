@@ -5,6 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const ownerEmail = process.env.NEXT_PUBLIC_OWNER_EMAIL?.trim() ?? "";
+export const designerEmail = process.env.NEXT_PUBLIC_DESIGNER_EMAIL?.trim() ?? "";
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 
 export const supabase = isSupabaseConfigured
@@ -20,14 +21,14 @@ export async function loadWorkspaceState(): Promise<AppState | null> {
   return (data?.state as AppState | undefined) ?? null;
 }
 
-export async function signInOwner(password: string) {
-  if (!supabase || !ownerEmail) throw new Error("Не задан email владельца Supabase");
-  const { data, error } = await supabase.auth.signInWithPassword({ email: ownerEmail, password });
+export async function signInWorkspace(email: string, password: string) {
+  if (!supabase || !email) throw new Error("Не задан email пользователя Supabase");
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data.user;
 }
 
-export async function getOwnerSession() {
+export async function getWorkspaceSession() {
   if (!supabase) return null;
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;

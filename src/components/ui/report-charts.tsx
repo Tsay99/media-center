@@ -106,14 +106,14 @@ export function ReportCharts({
                 <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #dce8e2", boxShadow: "0 8px 24px rgba(21, 35, 31, .08)", fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                 <Area type="monotone" dataKey="plan" name="Плановые материалы" stroke="#2563eb" strokeWidth={2} fill="url(#report-plan-fill)" />
-                <Area type="monotone" dataKey="fact" name="Факт-публикации" stroke="#059669" strokeWidth={2} fill="url(#report-fact-fill)" />
+                <Area type="monotone" dataKey="fact" name="Опубликовано" stroke="#059669" strokeWidth={2} fill="url(#report-fact-fill)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </section>
 
         <section className="report-card min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
-          <div className="ui-section-title"><h3>Факт по соцсетям</h3></div>
+          <div className="ui-section-title"><h3>Опубликовано по площадкам</h3></div>
           <p className="mt-1 text-xs text-gray-500">Распределение публикаций за месяц</p>
           {platformChartData.length === 0 ? (
             <div className="flex h-[250px] items-center justify-center text-center text-sm text-gray-400">
@@ -156,7 +156,7 @@ export function ReportCharts({
               <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #dce8e2", boxShadow: "0 8px 24px rgba(21, 35, 31, .08)", fontSize: 12 }} />
               <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
               <Bar dataKey="plan" name="План" fill="#a7c3ba" radius={[5, 5, 0, 0]} />
-              <Bar dataKey="fact" name="Факт" fill="#10b981" radius={[5, 5, 0, 0]} />
+              <Bar dataKey="fact" name="Опубликовано" fill="#10b981" radius={[5, 5, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
