@@ -219,6 +219,28 @@ body {
   -webkit-backdrop-filter: blur(14px);
 }
 
+/* Keep information-dense pages close to the desktop layout on small screens.
+   Cards become two columns; the calendar gets its own seven-column month grid. */
+@media (max-width: 639px) {
+  .report-page .sm\:grid-cols-2,
+  .report-page .md\:grid-cols-2,
+  .ui-feature-bento .sm\:grid-cols-2,
+  .plan-fact-shell .sm\:grid-cols-2,
+  .dashboard-overview .sm\:grid-cols-2,
+  .dashboard-overview .md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-page .sm\:grid-cols-2 > *,
+  .report-page .md\:grid-cols-2 > *,
+  .ui-feature-bento .sm\:grid-cols-2 > *,
+  .plan-fact-shell .sm\:grid-cols-2 > *,
+  .dashboard-overview .sm\:grid-cols-2 > *,
+  .dashboard-overview .md\:grid-cols-2 > * {
+    min-width: 0;
+  }
+}
+
 .app-page-header {
   border-bottom: 1px solid #e2e9f2;
   padding-bottom: 1rem;
