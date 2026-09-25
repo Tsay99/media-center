@@ -141,6 +141,17 @@ function platformNameForContentType(type: ContentType) { return CONTENT_PLATFORM
 function platformIdForContentType(type: ContentType, platforms: Platform[]) { const name = platformNameForContentType(type).toLowerCase(); return platforms.find((platform) => platform.name.trim().toLowerCase() === name)?.id; }
 function bulkChannelsForPlatform(platform: Platform): BulkChannel[] { const normalized = platform.name.trim().toLowerCase(); if (normalized === "instagram") return (["Reels", "Пост", "Stories"] as ContentType[]).map((type) => ({ id: `${platform.id}:${type}`, platformId: platform.id, platformName: platform.name, type, label: type })); if (normalized === "youtube") return (["YouTube", "Shorts"] as ContentType[]).map((type) => ({ id: `${platform.id}:${type}`, platformId: platform.id, platformName: platform.name, type, label: type })); const knownType = (["Threads", "TikTok", "LinkedIn"] as ContentType[]).find((type) => platformNameForContentType(type).toLowerCase() === normalized); return [{ id: `${platform.id}:${knownType ?? "Другое"}`, platformId: platform.id, platformName: platform.name, type: knownType ?? "Другое", label: platform.name }]; }
 function channelPlanValue(plan: MonthPlan, productId: string, channel: BulkChannel, platforms: Platform[]) { const values = plan.channels?.[productId]; if (values && Object.prototype.hasOwnProperty.call(values, channel.id)) return Number(values[channel.id] ?? 0); const platform = platforms.find((item) => item.id === channel.platformId); const primaryChannelId = platform ? bulkChannelsForPlatform(platform)[0]?.id : channel.id; const legacyValue = Number(plan.platforms?.[productId]?.[channel.platformId] ?? plan.platforms?.[productId]?.[channel.platformName] ?? 0); return channel.id === primaryChannelId ? legacyValue : 0; }
+function configuredChannelPlanValue(plan: MonthPlan, productId: string, channel: BulkChannel, platforms: Platform[]) {
+  const channelValues = plan.channels?.[productId];
+  if (channelValues && Object.prototype.hasOwnProperty.call(channelValues, channel.id)) return Number(channelValues[channel.id] ?? 0);
+  const platform = platforms.find((item) => item.id === channel.platformId);
+  const primaryChannelId = platform ? bulkChannelsForPlatform(platform)[0]?.id : channel.id;
+  if (channel.id !== primaryChannelId) return undefined;
+  const platformValues = plan.platforms?.[productId];
+  if (platformValues && Object.prototype.hasOwnProperty.call(platformValues, channel.platformId)) return Number(platformValues[channel.platformId] ?? 0);
+  if (platformValues && Object.prototype.hasOwnProperty.call(platformValues, channel.platformName)) return Number(platformValues[channel.platformName] ?? 0);
+  return undefined;
+}
  function productWeekdays(plan: MonthPlan, productId: string) { const values = plan.weekdays?.[productId] ?? {}; const saved = values[PRODUCT_WEEKDAYS_KEY] ?? Object.values(values).find((days) => days !== undefined); return saved ?? [1, 3, 5]; }
 function channelWeekdays(plan: MonthPlan, productId: string, channelId: string) { void channelId; return productWeekdays(plan, productId); }
 function exclusiveFormat(type: ContentType) { return type === "Reels" || type === "Пост" ? type : null; }
@@ -510,7 +521,18 @@ export default function ContentPlanFactApp() {
     const sourceMonth = subMonths(month, 1);
     const sourceKey = monthKey(sourceMonth);
     const targetKey = monthKey(month);
+    const sourcePlan = getOrCreatePlan(state, sourceKey);
     const sourceDraftCount = state.content.filter((item) => item.plannedPublishDate?.startsWith(sourceKey)).length;
+    const sourcePlanHasValues = [
+      ...Object.values(sourcePlan.totals ?? {}),
+      ...Object.values(sourcePlan.products ?? {}).flatMap((values) => Object.values(values)),
+      ...Object.values(sourcePlan.platforms ?? {}).flatMap((values) => Object.values(values)),
+      ...Object.values(sourcePlan.channels ?? {}).flatMap((values) => Object.values(values)),
+    ].some((value) => Number(value) > 0);
+    if (!sourceDraftCount && !sourcePlanHasValues) {
+      notify(`В ${monthLabel(sourceMonth).toLowerCase()} нет исходного плана — ${monthLabel(month)} не изменён`);
+      return;
+    }
     const publishedContentIds = new Set(state.publications.map((publication) => publication.contentId));
     const targetDraftCount = state.content.filter((item) =>
       item.plannedPublishDate?.startsWith(targetKey) && item.status !== "published" && !publishedContentIds.has(item.id),
@@ -1820,12 +1842,26 @@ function DistributionEngineDialog({ month, products, platforms, plan, plannedCon
   const [showReasons, setShowReasons] = useState(false);
   const [rebuildCurrentPlans, setRebuildCurrentPlans] = useState(false);
   const monthValue = monthKey(month);
+  const publishedContentIds = useMemo(() => new Set(publications.map((publication) => publication.contentId)), [publications]);
+  const draftCountBySeries = useMemo(() => {
+    const counts = new Map<string, number>();
+    plannedContent.forEach((item) => {
+      if (!item.plannedPublishDate?.startsWith(monthValue) || item.status === "published" || publishedContentIds.has(item.id)) return;
+      const platformId = item.plannedPlatformId ?? platformIdForContentType(item.type, platforms);
+      const channel = channels.find((entry) => entry.platformId === platformId && entry.type === item.type);
+      if (!channel) return;
+      const seriesId = `${item.productId}|${channel.id}`;
+      counts.set(seriesId, (counts.get(seriesId) ?? 0) + 1);
+    });
+    return counts;
+  }, [channels, monthValue, plannedContent, platforms, publishedContentIds]);
   const series = useMemo<DistributionSeries[]>(() => products.flatMap((product) => channels.flatMap((channel) => {
-    const monthlyCount = channelPlanValue(plan, product.id, channel, platforms);
+    const configuredCount = configuredChannelPlanValue(plan, product.id, channel, platforms);
+    const monthlyCount = configuredCount ?? (rebuildCurrentPlans ? draftCountBySeries.get(`${product.id}|${channel.id}`) ?? 0 : 0);
     if (monthlyCount <= 0) return [] as DistributionSeries[];
     const weekdays = productWeekdays(plan, product.id);
     return [{ id: `${product.id}|${channel.id}`, productId: product.id, productName: product.name, channelId: channel.id, platformId: channel.platformId, platformName: channel.platformName, format: channel.type, monthlyCount, preferredWeekdays: weekdays, allowedWeekdays: weekdays, priority: 3, minGapDays: channel.type === "Threads" ? undefined : monthlyCount > 1 ? 2 : undefined, maxPerDay: channel.type === "Threads" ? 1 : channel.type === "Stories" ? 2 : 1, dailyResourceKey: channel.type === "Reels" ? `instagram:${instagramAccountKey(product)}` : undefined, dailyResourceLimit: channel.type === "Reels" ? 1 : undefined } satisfies DistributionSeries];
-  })), [channels, plan, platforms, products]);
+  })), [channels, draftCountBySeries, plan, platforms, products, rebuildCurrentPlans]);
   const existing = useMemo<DistributionExisting[]>(() => {
     const contentById = new Map(plannedContent.map((item) => [item.id, item]));
     const publishedContentPlatforms = new Set(publications.map((publication) => `${publication.contentId}|${publication.platformId}`));
@@ -1846,7 +1882,6 @@ function DistributionEngineDialog({ month, products, platforms, plan, plannedCon
     });
     return result;
   }, [channels, plannedContent, platforms, publications]);
-  const publishedContentIds = useMemo(() => new Set(publications.map((publication) => publication.contentId)), [publications]);
   const seriesIds = useMemo(() => new Set(series.map((item) => item.id)), [series]);
   const reassignablePlans = useMemo(() => plannedContent.filter((item) => {
     if (!item.plannedPublishDate?.startsWith(monthValue) || item.status === "published" || publishedContentIds.has(item.id)) return false;
