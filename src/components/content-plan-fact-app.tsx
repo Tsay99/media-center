@@ -24,7 +24,6 @@ import { Description, Label, ListBox, Select } from "./ui/heroui-select";
 import { SelectorChips } from "./ui/selector-chips";
 import { MouseFollowingEyes } from "./ui/mouse-following-eyes";
 import { GuestProductTour } from "./ui/guest-product-tour";
-import { DesktopInstallCard } from "./desktop-install-card";
 import { Tooltip as AppTooltip, TooltipContent as AppTooltipContent, TooltipProvider as AppTooltipProvider, TooltipTrigger as AppTooltipTrigger } from "./ui/tooltip";
 import { motion } from "motion/react";
 import { Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, CalendarDays, Check, ChevronLeft, ChevronRight, ClipboardList, Clock3, Download, Gauge, KeyRound, LayoutGrid, List, LogIn, LogOut, Menu, MessageCircle, Package, Pencil, Plus, RotateCcw, Search, Settings, Share2, SlidersHorizontal, Sparkles, Target, Trash2, Upload, X } from "lucide-react";
@@ -1204,7 +1203,6 @@ function WorkReport({ state, month, setMonth, products, platforms, plan, readOnl
         </div>
       </div>
     </section>
-    <DesktopInstallCard />
     <section className="mt-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 sm:p-5">
       <div className={`grid ${gridMobileColumns} ${gridDesktopColumns}`} style={{ gap: `${Math.min(32, Math.max(4, visualLayout.productGrid.gapPx ?? 12))}px` }}>{displayProductRows.map((row, index) => <ProductReportCard key={row.product.id} {...row} index={index} onOpen={() => setSelectedProductId(row.product.id)} />)}</div>
     </section>
