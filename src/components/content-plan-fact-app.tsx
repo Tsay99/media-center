@@ -2,13 +2,13 @@
 
 import { addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, getDay, isSameMonth, startOfMonth, startOfWeek, subDays, subMonths } from "date-fns";
 import { ru } from "date-fns/locale";
-import { ChangeEvent, CSSProperties, DragEvent as ReactDragEvent, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, createContext, CSSProperties, DragEvent as ReactDragEvent, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import type { IconType } from "react-icons";
 import { SiFacebook, SiInstagram, SiPinterest, SiTelegram, SiThreads, SiTiktok, SiVk, SiWhatsapp, SiYoutube } from "react-icons/si";
 import { FaLinkedin, FaXTwitter } from "react-icons/fa6";
-import { AppState, CONTENT_TYPES, ContentItem, ContentType, MonthPlan, PersonalTask, Platform, Product, Publication, SiteSettings, TaskPriority, TaskStatus, WorkloadBreakdown, WorkloadSettings } from "../lib/types";
+import { AppState, CONTENT_TYPES, ContentItem, ContentType, MonthPlan, PersonalTask, Platform, Product, Publication, SiteSettings, TaskPriority, TaskStatus, VisualLayout, WorkloadBreakdown, WorkloadSettings } from "../lib/types";
 import { DistributionExisting, DistributionSeries, distributeContent } from "../lib/distribution-engine";
 import { cloneDemoState, getOrCreatePlan } from "../lib/demo-data";
 import { designerEmail, getWorkspaceSession, isSupabaseConfigured, loadPersonalTasks, loadWorkspaceState, ownerEmail, savePersonalTasks, saveWorkspaceState, signInWorkspace, signOutOwner } from "../lib/supabase";
@@ -34,6 +34,7 @@ function ChartPlaceholder() {
 
 const ReportCharts = dynamic(() => import("./ui/report-charts").then((module) => module.ReportCharts), { ssr: false, loading: () => <ChartPlaceholder /> });
 const WorkloadRadarCharts = dynamic(() => import("./ui/report-charts").then((module) => module.WorkloadRadarCharts), { ssr: false, loading: () => <ChartPlaceholder /> });
+const VisualSiteBuilder = dynamic(() => import("./visual-site-builder"), { ssr: false, loading: () => <div className="grid min-h-80 place-items-center rounded-2xl border border-blue-100 bg-white text-sm font-semibold text-blue-700 shadow-sm">Загружаем конструктор…</div> });
 
 type View = "dashboard" | "today" | "calendar" | "tasks" | "load" | "plan" | "directory" | "settings";
 type UserRole = "guest" | "owner" | "designer";
@@ -74,6 +75,26 @@ const inputClass = "ui-input";
 const REPORT_COLORS = ["#2563eb", "#0891b2", "#db2777", "#4f46e5", "#059669", "#d97706"];
 const DEFAULT_BACKGROUND_IMAGE = "https://cdn.21st.dev/assets/mirror/4a/4a036b28b8c09c74e3c094c95910fc41dfad836e8f93894f3f9b26b56ec20f63.jpg";
 const DEFAULT_SITE_SETTINGS: SiteSettings = { brandName: "Медиа Центр", brandTagline: "By Tsay Maxim", logoSrc: "/media-center-logo.png", logoScale: 100, logoContainerWidth: 216, logoContainerHeight: 44, logoContainerRadius: 12, logoContainerPadding: 8, logoSidebarHorizontalPadding: 20, logoSidebarTopOffset: 22, logoContainerBackground: "transparent", backgroundImage: DEFAULT_BACKGROUND_IMAGE, backgroundImages: {}, backgroundOpacity: 35, backgroundPositionX: 50, backgroundPositionY: 50, guestViews: ["dashboard", "calendar", "load"], showSyncStatus: true, showContact: true };
+const DEFAULT_VISUAL_LAYOUT: Required<VisualLayout> = {
+  pageHeader: { tone: "blue", align: "left", density: "comfortable", showEyebrow: true },
+  productGrid: { columnsDesktop: 3, columnsMobile: 2, gap: "comfortable", sort: "manual" },
+  metricCards: { columnsDesktop: 4, columnsMobile: 2, showPlan: true, showFact: true, showCompletion: true, showActiveDays: true },
+  sidebar: { density: "comfortable", tone: "navy", showTagline: false },
+  calendarToolbar: { density: "comfortable", showViewSwitch: true, showFilters: true },
+  background: { overlay: "soft", blur: "none" },
+};
+const VisualLayoutContext = createContext<Required<VisualLayout>>(DEFAULT_VISUAL_LAYOUT);
+function useVisualLayout() { return useContext(VisualLayoutContext); }
+function resolveVisualLayout(layout?: VisualLayout): Required<VisualLayout> {
+  return {
+    pageHeader: { ...DEFAULT_VISUAL_LAYOUT.pageHeader, ...(layout?.pageHeader ?? {}) },
+    productGrid: { ...DEFAULT_VISUAL_LAYOUT.productGrid, ...(layout?.productGrid ?? {}) },
+    metricCards: { ...DEFAULT_VISUAL_LAYOUT.metricCards, ...(layout?.metricCards ?? {}) },
+    sidebar: { ...DEFAULT_VISUAL_LAYOUT.sidebar, ...(layout?.sidebar ?? {}) },
+    calendarToolbar: { ...DEFAULT_VISUAL_LAYOUT.calendarToolbar, ...(layout?.calendarToolbar ?? {}) },
+    background: { ...DEFAULT_VISUAL_LAYOUT.background, ...(layout?.background ?? {}) },
+  };
+}
 const ALL_PRODUCTS_ID = "__all-products__";
 const PRODUCT_WEEKDAYS_KEY = "__product__";
 const CONTENT_PLATFORM_MAP: Record<ContentType, string> = { Reels: "Instagram", Пост: "Instagram", Stories: "Instagram", Threads: "Threads", TikTok: "TikTok", LinkedIn: "LinkedIn", YouTube: "YouTube", Shorts: "YouTube", Другое: "Instagram" };
@@ -158,6 +179,7 @@ function FormSelect({ name, defaultValue = "", options, ariaLabel }: { name: str
 function Modal({ title, children, onClose, wide = false }: { title: string; children: ReactNode; onClose: () => void; wide?: boolean }) { const titleId = `modal-title-${title.toLowerCase().replace(/[^a-zа-яё0-9]+/gi, "-")}`; useEffect(() => { function handleKeyDown(event: KeyboardEvent) { if (event.key === "Escape") onClose(); } document.addEventListener("keydown", handleKeyDown); return () => document.removeEventListener("keydown", handleKeyDown); }, [onClose]); return <div className="ui-modal-overlay fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div className={`ui-modal ml-auto flex h-full flex-col ${wide ? "sm:max-w-3xl" : "sm:max-w-xl"}`}><div className="ui-modal__header sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3.5 sm:px-5 sm:py-4"><h2 id={titleId} className="min-w-0 pr-3 text-lg font-semibold text-gray-900">{title}</h2><IconButton label="Закрыть" onClick={onClose}><X size={18} /></IconButton></div><div className="ui-modal__body flex-1 p-4 sm:p-5">{children}</div></div></div>; }
 function AuthLoadingScreen() { return <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6" aria-busy="true" aria-live="polite"><div className="text-center"><div className="loading-dots" aria-hidden="true"><span /><span /><span /></div><p className="mt-4 text-sm font-semibold text-gray-700">Загружаем рабочую панель</p><p className="mt-1 text-xs text-gray-400">Синхронизируем данные</p></div></main>; }
 function WorkspaceSidebar({ view, visibleNavItems, openView, role, siteSettings, mobileOpen, setMobileOpen, sidebarCollapsed, setSidebarCollapsed, onLogout, onLogin }: { view: View; visibleNavItems: typeof NAV_ITEMS; openView: (next: View) => void; role: UserRole; siteSettings: SiteSettings; mobileOpen: boolean; setMobileOpen: (value: boolean) => void; sidebarCollapsed: boolean; setSidebarCollapsed: (value: boolean) => void; onLogout: () => void; onLogin: () => void }) {
+  const visualLayout = useVisualLayout();
   const logoScale = Math.min(140, Math.max(60, siteSettings.logoScale ?? DEFAULT_SITE_SETTINGS.logoScale ?? 100)) / 100;
   const logoContainerWidth = Math.min(228, Math.max(160, siteSettings.logoContainerWidth ?? DEFAULT_SITE_SETTINGS.logoContainerWidth ?? 216));
   const logoContainerHeight = Math.min(58, Math.max(36, siteSettings.logoContainerHeight ?? DEFAULT_SITE_SETTINGS.logoContainerHeight ?? 44));
@@ -166,14 +188,16 @@ function WorkspaceSidebar({ view, visibleNavItems, openView, role, siteSettings,
   const logoSidebarHorizontalPadding = Math.min(32, Math.max(0, siteSettings.logoSidebarHorizontalPadding ?? DEFAULT_SITE_SETTINGS.logoSidebarHorizontalPadding ?? 20));
   const logoSidebarTopOffset = Math.min(32, Math.max(0, siteSettings.logoSidebarTopOffset ?? DEFAULT_SITE_SETTINGS.logoSidebarTopOffset ?? 22));
   const sidebarEdgeInset = 12;
-  const navButtonClass = (active: boolean) => `flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition ${sidebarCollapsed ? "justify-center px-2" : ""} ${active ? "bg-blue-400/15 text-blue-100" : "text-white/55 hover:bg-white/[.07] hover:text-white"}`;
+  const navButtonClass = (active: boolean) => `flex ${visualLayout.sidebar.density === "compact" ? "h-9" : "h-10"} w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition ${sidebarCollapsed ? "justify-center px-2" : ""} ${active ? "bg-blue-400/15 text-blue-100" : "text-white/55 hover:bg-white/[.07] hover:text-white"}`;
   const primaryNavItems = visibleNavItems;
-  return <aside onMouseEnter={() => { if (sidebarCollapsed) setSidebarCollapsed(false); }} onFocus={() => { if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col overflow-hidden border-r border-white/10 bg-[#0e1d35] px-3 py-3 text-white transition-[width,transform] duration-300 ease-in-out lg:translate-x-0 ${sidebarCollapsed ? "lg:w-16" : "lg:w-64"} ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+  const sidebarTone = visualLayout.sidebar.tone === "slate" ? "bg-slate-900" : visualLayout.sidebar.tone === "indigo" ? "bg-indigo-950" : "bg-[#0e1d35]";
+  return <aside onMouseEnter={() => { if (sidebarCollapsed) setSidebarCollapsed(false); }} onFocus={() => { if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col overflow-hidden border-r border-white/10 ${sidebarTone} px-3 py-3 text-white transition-[width,transform] duration-300 ease-in-out lg:translate-x-0 ${sidebarCollapsed ? "lg:w-16" : "lg:w-64"} ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
     <div className={`flex h-16 shrink-0 items-center border-b border-white/10 ${sidebarCollapsed ? "justify-center" : "justify-between"}`} style={sidebarCollapsed ? undefined : { paddingLeft: `${Math.max(0, logoSidebarHorizontalPadding - sidebarEdgeInset)}px`, paddingRight: `${Math.max(0, logoSidebarHorizontalPadding - sidebarEdgeInset)}px` }}>
       <button type="button" onClick={() => openView("dashboard")} aria-label="Открыть главную" className={`relative shrink-0 overflow-hidden transition hover:opacity-90 ${sidebarCollapsed ? "h-9 w-9 rounded-xl bg-gradient-to-br from-sky-400 to-violet-500" : logoContainerBackgroundClass(siteSettings.logoContainerBackground)}`} style={sidebarCollapsed ? undefined : { width: `${logoContainerWidth}px`, height: `${logoContainerHeight}px`, borderRadius: `${logoContainerRadius}px`, padding: `${logoContainerPadding}px`, transform: `translateY(${logoSidebarTopOffset - 22}px)` }}><Image src={siteSettings.logoSrc || DEFAULT_SITE_SETTINGS.logoSrc!} alt={siteSettings.brandName} width={216} height={80} priority style={{ transform: sidebarCollapsed ? undefined : `scale(${logoScale})` }} className={sidebarCollapsed ? "hidden" : "h-full w-full object-contain"} />{sidebarCollapsed && <span className="absolute inset-0 grid place-items-center text-lg font-bold text-white">{siteSettings.brandName.trim().charAt(0) || "М"}</span>}</button>
       {!sidebarCollapsed && <button type="button" aria-label="Свернуть меню" title="Свернуть меню" onClick={() => setSidebarCollapsed(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-white/45 transition hover:bg-white/10 hover:text-white"><Menu size={17} /></button>}
     </div>
-    <div className={`mt-5 min-h-0 flex-1 overflow-y-auto ${sidebarCollapsed ? "px-0" : "px-1"}`}>
+    {visualLayout.sidebar.showTagline && !sidebarCollapsed && <p className="px-2 pt-2 text-[10px] font-semibold text-white/35">{siteSettings.brandTagline}</p>}
+    <div className={`${visualLayout.sidebar.showTagline && !sidebarCollapsed ? "mt-3" : "mt-5"} min-h-0 flex-1 overflow-y-auto ${sidebarCollapsed ? "px-0" : "px-1"}`}>
       {!sidebarCollapsed && <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[.16em] text-white/30">Рабочая панель</div>}
       <nav data-tour="guest-navigation" aria-label="Основная навигация" className="grid gap-1">{primaryNavItems.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} onClick={() => { openView(item.id); setMobileOpen(false); }} title={sidebarCollapsed ? item.label : undefined} className={navButtonClass(view === item.id)}><Icon size={17} /><span className={sidebarCollapsed ? "sr-only lg:hidden" : "truncate"}>{item.label}</span></button>; })}</nav>
     </div>
@@ -196,6 +220,7 @@ function OwnerLoginDialog({ onClose, onLogin }: { onClose: () => void; onLogin: 
 function SiteSettingsPage({ settings, onPreview, onSave, onDiscardPreview, onNotify }: { settings: SiteSettings; onPreview: (next: SiteSettings) => void; onSave: (next: SiteSettings) => void; onDiscardPreview: () => void; onNotify: (message: string) => void }) {
   const [draft, setDraft] = useState<SiteSettings>(settings);
   const [backgroundTarget, setBackgroundTarget] = useState<"all" | View>("all");
+  const [builderOpen, setBuilderOpen] = useState(false);
   const guestOptions = NAV_ITEMS.filter((item) => GUEST_NAV_ORDER.includes(item.id));
   const logoScale = Math.min(140, Math.max(60, draft.logoScale ?? DEFAULT_SITE_SETTINGS.logoScale ?? 100));
   const logoContainerWidth = Math.min(228, Math.max(160, draft.logoContainerWidth ?? DEFAULT_SITE_SETTINGS.logoContainerWidth ?? 216));
@@ -267,11 +292,13 @@ function SiteSettingsPage({ settings, onPreview, onSave, onDiscardPreview, onNot
     onNotify("Черновик дизайна отменён");
   }
 
+  if (builderOpen) return <VisualSiteBuilder settings={settings} onPreview={onPreview} onPublish={(next) => { onSave(next); setBuilderOpen(false); }} onClose={() => { onDiscardPreview(); setBuilderOpen(false); }} />;
+
   return <div className="grid gap-5">
     <PageHeader eyebrow="Настройки владельца" title="Настройки сайта" description="Управляйте брендом, логотипом и тем, какие разделы доступны гостевому просмотру." />
     <section className="sticky top-3 z-20 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-white/95 p-3 shadow-lg shadow-blue-950/10 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:p-4">
       <div className="flex min-w-0 items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-600 text-white"><SlidersHorizontal size={17} /></span><div><p className="text-sm font-bold text-gray-900">Визуальный редактор · live preview</p><p className="mt-0.5 text-xs leading-5 text-gray-500">Все изменения сразу видны в Sidebar, фоне и интерфейсе. До сохранения они остаются черновиком.</p></div></div>
-      <div className="flex flex-wrap items-center gap-2"><Badge tone={isDirty ? "accent" : "success"}>{isDirty ? "Есть несохранённые изменения" : "Сохранено"}</Badge><Button variant="secondary" onClick={discard} disabled={!isDirty}><RotateCcw size={14} /> Отменить</Button><Button onClick={save} disabled={!isDirty}><Check size={14} /> Сохранить всё</Button></div>
+      <div className="flex flex-wrap items-center gap-2"><Button variant="secondary" onClick={() => setBuilderOpen(true)}><Sparkles size={14} /> Конструктор</Button><Badge tone={isDirty ? "accent" : "success"}>{isDirty ? "Есть несохранённые изменения" : "Сохранено"}</Badge><Button variant="secondary" onClick={discard} disabled={!isDirty}><RotateCcw size={14} /> Отменить</Button><Button onClick={save} disabled={!isDirty}><Check size={14} /> Сохранить всё</Button></div>
     </section>
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,.8fr)]">
       <section className="rounded-[var(--app-radius-lg)] border border-[var(--app-border)] bg-white p-4 shadow-sm sm:p-5">
@@ -414,6 +441,7 @@ export default function ContentPlanFactApp() {
   const activePlatforms = useMemo(() => state.platforms.filter((item) => !item.archived).sort((a, b) => a.order - b.order), [state.platforms]);
   const persistedSiteSettings = state.siteSettings ?? DEFAULT_SITE_SETTINGS;
   const siteSettings = siteSettingsPreview ?? persistedSiteSettings;
+  const visualLayout = useMemo(() => resolveVisualLayout(siteSettings.visualEditor?.layout), [siteSettings.visualEditor?.layout]);
   const currentPlan = useMemo(() => getOrCreatePlan(state, monthKey(month)), [state, month]);
   const currentPublications = useMemo(() => state.publications.filter((item) => item.date.startsWith(monthKey(month))), [state.publications, month]);
   const actual = (productId: string, platformId: string) => currentPublications.filter((publication) => publication.platformId === platformId && state.content.find((item) => item.id === publication.contentId)?.productId === productId).length;
@@ -638,8 +666,10 @@ function markPlannedRangeAsPublished(startDate: string, endDate: string, platfor
   const pageBackground = backgroundForView(siteSettings, view);
 
   return (
+    <VisualLayoutContext.Provider value={visualLayout}>
     <div className={`app-shell relative min-h-screen bg-[#f7f8fc] text-gray-900 ${pageBackground ? "has-page-background" : ""}`}>
-      {pageBackground && <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 bg-cover bg-no-repeat" style={{ backgroundImage: `url(${pageBackground})`, backgroundPosition: `${Math.min(100, Math.max(0, siteSettings.backgroundPositionX ?? DEFAULT_SITE_SETTINGS.backgroundPositionX ?? 50))}% ${Math.min(100, Math.max(0, siteSettings.backgroundPositionY ?? DEFAULT_SITE_SETTINGS.backgroundPositionY ?? 50))}%`, opacity: Math.min(100, Math.max(0, siteSettings.backgroundOpacity ?? DEFAULT_SITE_SETTINGS.backgroundOpacity ?? 35)) / 100 }} />}
+      {pageBackground && <div aria-hidden="true" className={`pointer-events-none fixed inset-0 z-0 bg-cover bg-no-repeat ${visualLayout.background.blur === "soft" ? "blur-sm" : ""}`} style={{ backgroundImage: `url(${pageBackground})`, backgroundPosition: `${Math.min(100, Math.max(0, siteSettings.backgroundPositionX ?? DEFAULT_SITE_SETTINGS.backgroundPositionX ?? 50))}% ${Math.min(100, Math.max(0, siteSettings.backgroundPositionY ?? DEFAULT_SITE_SETTINGS.backgroundPositionY ?? 50))}%`, opacity: Math.min(100, Math.max(0, siteSettings.backgroundOpacity ?? DEFAULT_SITE_SETTINGS.backgroundOpacity ?? 35)) / 100 }} />}
+      {pageBackground && visualLayout.background.overlay !== "none" && <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 bg-slate-950" style={{ opacity: visualLayout.background.overlay === "strong" ? 0.2 : 0.1 }} />}
       <WorkspaceSidebar view={view} visibleNavItems={visibleNavItems} openView={openView} role={role} siteSettings={siteSettings} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} onLogout={logout} onLogin={() => setOwnerLoginOpen(true)} />
       {mobileOpen && <button type="button" aria-label="Закрыть меню" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-[#080916]/35 lg:hidden" />}
       <main className={`relative z-10 min-h-screen min-w-0 overflow-x-clip transition-[padding] ${sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}`}>
@@ -650,15 +680,19 @@ function markPlannedRangeAsPublished(startDate: string, endDate: string, platfor
       <GuestProductTour enabled={authHydrated && role === "guest"} view={view} availableViews={guestTourViews} mobileOpen={mobileOpen} showContact={siteSettings.showContact} onOpenMobileMenu={() => setMobileOpen(true)} />
       {ownerLoginOpen && <OwnerLoginDialog onClose={() => setOwnerLoginOpen(false)} onLogin={(account, password) => login(account, password)} />}{toast && <div role="status" className="fixed bottom-5 left-1/2 z-[60] flex max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-center text-sm font-medium text-white shadow-xl"><Check size={16} className="text-emerald-300" /><span>{toast}</span>{lastBulkUndo && <button type="button" onClick={undoLastBulkAdd} className="rounded-lg bg-white/10 px-2.5 py-1 text-xs font-bold text-white transition hover:bg-white/20">Отменить</button>}</div>}
     </div>
+    </VisualLayoutContext.Provider>
   );
 }
 
 function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title?: string; description?: string; actions?: ReactNode }) {
+  const visualLayout = useVisualLayout();
+  const header = visualLayout.pageHeader;
+  const colors = header.tone === "emerald" ? ["#a7f3d0", "#6ee7b7", "#bfdbfe", "#d1fae5"] : header.tone === "violet" ? ["#ddd6fe", "#c4b5fd", "#bfdbfe", "#e9d5ff"] : ["#bfdbfe", "#93c5fd", "#c4b5fd", "#a7f3d0"];
   return <header className="app-page-header relative mb-4 overflow-hidden rounded-2xl border border-blue-100/80 bg-blue-50 shadow-sm">
-    <AnimatedGradient colors={["#bfdbfe", "#93c5fd", "#c4b5fd", "#a7f3d0"]} speed={0.035} blur="medium" />
-    <div className="relative z-10 flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
-      <div className="min-w-0">
-        {eyebrow && <p className="text-[11px] font-bold uppercase tracking-[.14em] text-blue-800/75">{eyebrow}</p>}
+    <AnimatedGradient colors={colors} speed={0.035} blur="medium" />
+    <div className={`relative z-10 flex flex-col gap-3 ${header.density === "compact" ? "p-3 sm:p-4" : "p-4 sm:p-5"} sm:flex-row sm:items-start sm:justify-between`}>
+      <div className={`min-w-0 ${header.align === "center" ? "text-center sm:text-center" : ""}`}>
+        {eyebrow && header.showEyebrow && <p className="text-[11px] font-bold uppercase tracking-[.14em] text-blue-800/75">{eyebrow}</p>}
         {title && <h2 className="mt-1 text-xl font-bold leading-tight tracking-tight text-blue-950 sm:text-2xl">{title}</h2>}
         {description && <p className="mt-1 max-w-3xl text-sm leading-5 text-blue-950/70">{description}</p>}
       </div>
@@ -934,6 +968,7 @@ function ProductDetailsDialog({ state, month, product, planned, fact, completion
   </Modal>;
 }
 function WorkReport({ state, month, setMonth, products, platforms, plan, readOnly = false, actual, onExport, syncState = "local" }: { state: AppState; month: Date; setMonth: (month: Date) => void; products: Product[]; platforms: Platform[]; plan: MonthPlan; readOnly?: boolean; actual: (productId: string, platformId: string) => number; onExport: () => void; syncState?: SyncState }) {
+  const visualLayout = useVisualLayout();
   const [actionProductFilter, setActionProductFilter] = useState("all");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [publicationSearch, setPublicationSearch] = useState("");
@@ -1004,6 +1039,17 @@ function WorkReport({ state, month, setMonth, products, platforms, plan, readOnl
   const visiblePublicationRows = filteredPublicationRows.slice((safePublicationPage - 1) * publicationPageSize, safePublicationPage * publicationPageSize);
   const syncLabel = syncState === "synced" ? "Синхронизировано" : syncState === "syncing" ? "Сохраняем" : syncState === "loading" ? "Загрузка" : syncState === "error" ? "Нет синхронизации" : "Локальный режим";
   const syncTone = syncState === "synced" ? "success" : syncState === "error" ? "neutral" : "accent";
+  const metricSettings = visualLayout.metricCards;
+  const hasVisibleMetric = metricSettings.showPlan || metricSettings.showFact || metricSettings.showCompletion || metricSettings.showActiveDays;
+  const showPlanMetric = hasVisibleMetric ? metricSettings.showPlan : true;
+  const showFactMetric = hasVisibleMetric ? metricSettings.showFact : false;
+  const showCompletionMetric = hasVisibleMetric ? metricSettings.showCompletion : false;
+  const showActiveDaysMetric = hasVisibleMetric ? metricSettings.showActiveDays : false;
+  const metricMobileColumns = metricSettings.columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2";
+  const metricDesktopColumns = metricSettings.columnsDesktop === 2 ? "xl:grid-cols-2" : metricSettings.columnsDesktop === 3 ? "xl:grid-cols-3" : "xl:grid-cols-4";
+  const gridMobileColumns = visualLayout.productGrid.columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2";
+  const gridDesktopColumns = visualLayout.productGrid.columnsDesktop === 2 ? "xl:grid-cols-2" : visualLayout.productGrid.columnsDesktop === 4 ? "xl:grid-cols-4" : "xl:grid-cols-3";
+  const displayProductRows = [...productRows].sort((left, right) => visualLayout.productGrid.sort === "name" ? left.product.name.localeCompare(right.product.name, "ru") : visualLayout.productGrid.sort === "completion" ? right.completion - left.completion : left.product.order - right.product.order);
 
   return <div className="report-page">
     <section data-tour="home-summary" className="work-activity-panel relative mt-4 overflow-hidden rounded-2xl border border-blue-100/80 bg-blue-50 shadow-sm">
@@ -1022,27 +1068,27 @@ function WorkReport({ state, month, setMonth, products, platforms, plan, readOnl
             <Badge tone="success">{percent(totalFact, totalPlan)}% плана выполнено</Badge>
           </div>
        </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-white/70 bg-white/65 p-3 backdrop-blur-sm">
+        <div className={`mt-4 grid gap-2 ${metricMobileColumns} ${metricDesktopColumns}`}>
+          {showPlanMetric && <div className="rounded-xl border border-white/70 bg-white/65 p-3 backdrop-blur-sm">
             <span className="block text-[10px] font-bold uppercase tracking-wide text-blue-900/55">План</span>
             <strong className="mt-1 block text-2xl font-bold text-blue-950"><NumberTicker value={totalPlan} /></strong>
             <span className="text-xs text-blue-900/60">публикаций на {monthLabel(month).toLowerCase()}</span>
-          </div>
-          <div className="rounded-xl border border-white/70 bg-white/65 p-3 backdrop-blur-sm">
+          </div>}
+          {showFactMetric && <div className="rounded-xl border border-white/70 bg-white/65 p-3 backdrop-blur-sm">
             <span className="block text-[10px] font-bold uppercase tracking-wide text-blue-900/55">Факт</span>
             <strong className="mt-1 block text-2xl font-bold text-blue-950"><NumberTicker value={totalFact} /></strong>
             <span className="text-xs text-blue-900/60">все отмеченные площадки</span>
-          </div>
-          <div className="rounded-xl border border-white/70 bg-white/65 p-3 backdrop-blur-sm">
+          </div>}
+          {showCompletionMetric && <div className="rounded-xl border border-white/70 bg-white/65 p-3 backdrop-blur-sm">
             <span className="block text-[10px] font-bold uppercase tracking-wide text-blue-900/55">Выполнение</span>
             <strong className="mt-1 block text-2xl font-bold text-blue-950"><NumberTicker value={percent(totalFact, totalPlan)} /><span className="ml-1 text-base font-semibold">%</span></strong>
             <span className="text-xs text-blue-900/60">{totalFact} из {totalPlan} публикаций</span>
-          </div>
-          <div className="rounded-xl border border-white/70 bg-white/65 p-3 backdrop-blur-sm">
+          </div>}
+          {showActiveDaysMetric && <div className="rounded-xl border border-white/70 bg-white/65 p-3 backdrop-blur-sm">
             <span className="block text-[10px] font-bold uppercase tracking-wide text-blue-900/55">Активные дни</span>
             <strong className="mt-1 block text-2xl font-bold text-blue-950"><NumberTicker value={activeDays} /></strong>
             <span className="text-xs text-blue-900/60">с отмеченными публикациями</span>
-          </div>
+          </div>}
         </div>
         <div className="mt-4">
           <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-blue-950/70">
@@ -1056,7 +1102,7 @@ function WorkReport({ state, month, setMonth, products, platforms, plan, readOnl
       </div>
     </section>
     <section className="mt-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 sm:p-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{productRows.map((row, index) => <ProductReportCard key={row.product.id} {...row} index={index} onOpen={() => setSelectedProductId(row.product.id)} />)}</div>
+      <div className={`grid ${gridMobileColumns} ${visualLayout.productGrid.gap === "compact" ? "gap-2" : "gap-3"} ${gridDesktopColumns}`}>{displayProductRows.map((row, index) => <ProductReportCard key={row.product.id} {...row} index={index} onOpen={() => setSelectedProductId(row.product.id)} />)}</div>
     </section>
     {selectedProductRow && <ProductDetailsDialog state={state} month={month} product={selectedProductRow.product} planned={selectedProductRow.planned} fact={selectedProductRow.fact} completion={selectedProductRow.completion} platforms={platforms} plan={plan} actual={actual} onClose={() => setSelectedProductId(null)} />}
 
@@ -1208,6 +1254,7 @@ function MobileCalendarGrid({ days, month, eventsForDay, state, products, readOn
   return <div className="border-t border-gray-100 p-2 sm:hidden"><div className="grid grid-cols-7 gap-px overflow-hidden rounded-t-lg border border-gray-200 bg-gray-200"><div className="contents">{weekdays.map((day) => <div key={day} className="bg-gray-50 py-1.5 text-center text-[9px] font-bold uppercase tracking-wide text-gray-400">{day}</div>)}</div>{days.map((day) => { const date = dateInput(day); const events = eventsForDay(day); const currentMonth = isSameMonth(day, month); return <div key={`mobile-${date}`} data-tour={date === TODAY ? "calendar-today-cell" : undefined} onDragOver={readOnly ? undefined : (event: { preventDefault: () => void }) => event.preventDefault()} onDrop={readOnly ? undefined : () => onDrop(date)} onClick={readOnly || selectionMode ? undefined : () => onCreateDay(date)} className={`group min-h-[72px] min-w-0 border-b border-r border-gray-200 p-1 transition ${readOnly ? "" : "cursor-pointer hover:bg-blue-50/25"} ${date === TODAY ? "bg-blue-50 ring-2 ring-inset ring-blue-300" : currentMonth ? "bg-white" : "bg-gray-50/70"}`}><div className="mb-1 flex items-center justify-between gap-1"><span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${date === TODAY ? "bg-blue-600 text-white" : currentMonth ? "text-gray-700" : "text-gray-300"}`}>{format(day, "d")}</span>{events.length > 0 && <span className="text-[8px] font-semibold text-gray-400">{events.length}</span>}</div><div className="grid min-w-0 gap-0.5">{events.slice(0, 4).map((event) => <MobileCalendarEvent key={event.id} event={event} state={state} products={products} readOnly={readOnly} designerMode={designerMode} selectionMode={selectionMode} selected={selectedEventIds.includes(event.id)} onSelect={() => onSelect(event.id)} onOpen={() => onOpen(event)} onDragStart={() => onDragStart(event)} onDragEnd={onDragEnd} />)}{events.length > 4 && <span className="truncate px-0.5 text-[8px] font-semibold text-gray-400">+{events.length - 4}</span>}</div></div>; })}</div></div>;
 }
 function Calendar({ state, month, setMonth, products, readOnly = false, designerMode = false, onNotify, onCreatePlan, onUpdateContent, onDeleteContent, onUpdatePublication, onDeletePublication, onMarkPlanned }: { state: AppState; month: Date; setMonth: (month: Date) => void; products: Product[]; readOnly?: boolean; designerMode?: boolean; onNotify: (message: string) => void; onCreatePlan: (data: { title: string; brief?: string; productId: string; type: ContentType; plannedPublishDate: string; plannedPlatformId?: string }) => void; onUpdateContent: (contentId: string, patch: Partial<ContentItem>) => void; onDeleteContent: (contentId: string) => void; onUpdatePublication: (publicationId: string, patch: { date?: string; platformId?: string }) => void; onDeletePublication: (publicationId: string) => void; onMarkPlanned: (date: string, onlyContentIds?: string[]) => void }) {
+  const visualLayout = useVisualLayout();
   const [editor, setEditor] = useState<CalendarEditor | null>(null);
   const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
   const [dragged, setDragged] = useState<CalendarEvent | null>(null);
@@ -1372,15 +1419,14 @@ function Calendar({ state, month, setMonth, products, readOnly = false, designer
     <PageHeader eyebrow="Планирование" title="Календарь" description="Весь месяц, приоритетные публикации и быстрый контроль плана и факта по дням." />
     <section data-tour="calendar-toolbar" className="overflow-visible rounded-xl border border-gray-200 bg-white shadow-sm">
       <div className="flex flex-col">
-        <div className="border-b border-gray-100 px-2 py-1.5 sm:px-3">
+        <div className={`border-b border-gray-100 px-2 ${visualLayout.calendarToolbar.density === "compact" ? "py-1 sm:px-2" : "py-1.5 sm:px-3"}`}>
           <div className="flex min-w-0 flex-wrap items-center gap-1.5 overflow-visible">
             {!readOnly && <Button onClick={() => setEditor({ kind: "new", date: dateInput(month) })} className="h-7 px-2 text-[11px]"><Plus size={13} /> <span className="hidden sm:inline">Новая запись</span><span className="sm:hidden">Новая</span></Button>}
             <Button variant="secondary" onClick={() => setMonth(new Date())} className="h-7 px-2 text-[11px]"><CalendarDays size={13} /> Сегодня</Button>
             <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-gray-200 bg-white p-0.5"><IconButton label="Предыдущий месяц" onClick={() => setMonth(subMonths(month, 1))}><ArrowLeft size={14} /></IconButton><h3 className="min-w-[112px] text-center text-xs font-bold text-gray-900">{monthLabel(month)}</h3><IconButton label="Следующий месяц" onClick={() => setMonth(addMonths(month, 1))}><ArrowRight size={14} /></IconButton></div>
-            <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 p-0.5"><button type="button" onClick={() => setMode("month")} className={`inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-[11px] font-semibold transition ${mode === "month" ? "bg-white text-blue-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}><LayoutGrid size={12} /> Месяц</button><button type="button" onClick={() => setMode("list")} className={`inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-[11px] font-semibold transition ${mode === "list" ? "bg-white text-blue-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}><List size={12} /> Список</button></div>
+            {visualLayout.calendarToolbar.showViewSwitch && <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 p-0.5"><button type="button" onClick={() => setMode("month")} className={`inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-[11px] font-semibold transition ${mode === "month" ? "bg-white text-blue-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}><LayoutGrid size={12} /> Месяц</button><button type="button" onClick={() => setMode("list")} className={`inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-[11px] font-semibold transition ${mode === "list" ? "bg-white text-blue-700 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}><List size={12} /> Список</button></div>}
             {!readOnly && <Button variant={selectionMode ? "primary" : "secondary"} onClick={() => selectionMode ? exitSelectionMode() : setSelectionMode(true)} className="h-7 shrink-0 px-2 text-[11px]"><Check size={12} /> {selectionMode ? "Готово" : "Выбрать"}</Button>}
-            {filterControls}
-            {selectControls}
+            {visualLayout.calendarToolbar.showFilters && <>{filterControls}{selectControls}</>}
           </div>
           {selectionMode && <div className="mt-1.5 flex min-w-max items-center gap-1.5 overflow-x-auto rounded-lg border border-blue-100 bg-blue-50/60 px-2 py-1.5"><span className="mr-1 shrink-0 text-[11px] font-semibold text-blue-900">Выбрано: {selectedEvents.length}</span><Button variant="ghost" onClick={toggleSelectAllVisible} disabled={!agendaEvents.length} className="h-7 shrink-0 px-2 text-[11px]"><Check size={12} /> {allVisibleSelected ? "Снять все" : "Выбрать все"}</Button><Button variant="secondary" onClick={markSelectedPublished} disabled={!selectedPlans.length} className="h-7 shrink-0 px-2 text-[11px]"><Check size={12} /> Опубликовано</Button><Button variant="secondary" onClick={() => setRedistributionOpen(true)} disabled={!selectedPlans.length} className="h-7 shrink-0 px-2 text-[11px]"><RotateCcw size={12} /> Перераспределить</Button><Button variant="danger" onClick={() => setBulkDeleteOpen(true)} disabled={!selectedEvents.length} className="h-7 shrink-0 px-2 text-[11px]"><Trash2 size={12} /> Удалить</Button><Button variant="ghost" onClick={() => setSelectedEventIds([])} className="h-7 shrink-0 px-2 text-[11px]">Снять выбор</Button></div>}
         </div>
