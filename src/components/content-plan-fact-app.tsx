@@ -148,7 +148,7 @@ function hasExclusiveConflict(used: Set<string>, productId: string, date: string
 function reserveExclusiveDate(used: Set<string>, productId: string, date: string, type: ContentType) { const format = exclusiveFormat(type); if (format) used.add(`${productId}|${date}|${format}`); }
 function bulkChannelNeedsTitle(type: ContentType) { return type === "Reels" || type === "Пост" || type === "YouTube" || type === "Shorts"; }
 function readableDate(value: string) { return format(new Date(`${value}T12:00:00`), "d MMMM yyyy", { locale: ru }); }
-function moveDateToMonth(value: string, targetMonth: Date) { const day = Number(value.slice(-2)); const lastDay = Number(format(endOfMonth(targetMonth), "d")); return `${monthKey(targetMonth)}-${String(Math.min(day, lastDay)).padStart(2, "0")}`; }
+function moveDateToMonth(value: string, targetMonth: Date) { const sourceDate = new Date(`${value}T12:00:00`); const firstTargetDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1, 12); const weekdayOffset = (sourceDate.getDay() - firstTargetDay.getDay() + 7) % 7; const weekOfMonth = Math.floor((sourceDate.getDate() - 1) / 7); const lastDay = Number(format(endOfMonth(targetMonth), "d")); let targetDay = 1 + weekdayOffset + weekOfMonth * 7; if (targetDay > lastDay) targetDay -= 7; return `${monthKey(targetMonth)}-${String(targetDay).padStart(2, "0")}`; }
 function repurposeDate(sourceDate: string, offsetDays: number) { return dateInput(addDays(new Date(`${sourceDate}T12:00:00`), offsetDays)); }
 
 function Button({ children, onClick, variant = "primary", type = "button", className = "", disabled = false }: { children: ReactNode; onClick?: () => void; variant?: "primary" | "secondary" | "ghost" | "danger"; type?: "button" | "submit"; className?: string; disabled?: boolean }) { return <button type={type} onClick={onClick} disabled={disabled} className={`ui-button ui-button--${variant} ${className}`}>{children}</button>; }
@@ -506,7 +506,64 @@ export default function ContentPlanFactApp() {
   function updateChannelPlan(productId: string, channelId: string, value: number) { setState((previous) => { const key = monthKey(month); const oldPlan = getOrCreatePlan(previous, key); return { ...previous, plans: { ...previous.plans, [key]: { ...oldPlan, channels: { ...(oldPlan.channels ?? {}), [productId]: { ...(oldPlan.channels?.[productId] ?? {}), [channelId]: Math.max(0, value) } } } } }; }); }
   function updateProductWeekdays(productId: string, weekdays: number[]) { setState((previous) => { const key = monthKey(month); const oldPlan = getOrCreatePlan(previous, key); return { ...previous, plans: { ...previous.plans, [key]: { ...oldPlan, weekdays: { ...(oldPlan.weekdays ?? {}), [productId]: { ...(oldPlan.weekdays?.[productId] ?? {}), [PRODUCT_WEEKDAYS_KEY]: weekdays } } } } }; }); }
   function updateWorkloadSettings(next: WorkloadSettings) { setState((previous) => ({ ...previous, workload: next })); }
-  function copyPreviousMonth() { const sourceMonth = subMonths(month, 1); const sourceKey = monthKey(sourceMonth); const targetKey = monthKey(month); let copiedCells = 0; let copiedCalendar = 0; setState((previous) => { const sourcePlan = getOrCreatePlan(previous, sourceKey); const targetPlan = getOrCreatePlan(previous, targetKey); const activeProductsInState = previous.products.filter((item) => !item.archived); const activePlatformsInState = previous.platforms.filter((item) => !item.archived); const nextPlatforms = { ...(targetPlan.platforms ?? {}) }; const nextChannels = { ...(targetPlan.channels ?? {}) }; const nextWeekdays = { ...(targetPlan.weekdays ?? {}) }; activeProductsInState.forEach((product) => { const sourceValues = sourcePlan.platforms?.[product.id] ?? {}; const targetValues = { ...(nextPlatforms[product.id] ?? {}) }; activePlatformsInState.forEach((platform) => { const sourceValue = Number(sourceValues[platform.id] ?? sourceValues[platform.name] ?? 0); const targetValue = Number(targetValues[platform.id] ?? targetValues[platform.name] ?? 0); if (sourceValue > 0 && targetValue === 0) { targetValues[platform.id] = sourceValue; copiedCells += 1; } }); nextPlatforms[product.id] = targetValues; const sourceChannelValues = sourcePlan.channels?.[product.id] ?? {}; const targetChannelValues = { ...(nextChannels[product.id] ?? {}) }; const sourceWeekdayValues = sourcePlan.weekdays?.[product.id] ?? {}; const targetWeekdayValues = { ...(nextWeekdays[product.id] ?? {}) }; activePlatformsInState.flatMap(bulkChannelsForPlatform).forEach((channel) => { const channelPlatform = activePlatformsInState.find((platform) => platform.id === channel.platformId); const primaryChannelId = channelPlatform ? bulkChannelsForPlatform(channelPlatform)[0]?.id : channel.id; const sourceValue = Number(sourceChannelValues[channel.id] ?? (channel.id === primaryChannelId ? sourceValues[channel.platformId] ?? sourceValues[channel.platformName] ?? 0 : 0)); const targetValue = Number(targetChannelValues[channel.id] ?? 0); if (sourceValue > 0 && targetValue === 0) { targetChannelValues[channel.id] = sourceValue; copiedCells += 1; } const sourceDays = sourceWeekdayValues[channel.id]; if (sourceDays?.length && !targetWeekdayValues[channel.id]) targetWeekdayValues[channel.id] = sourceDays; }); nextChannels[product.id] = targetChannelValues; nextWeekdays[product.id] = targetWeekdayValues; }); const targetContentKeys = new Set(previous.content.filter((item) => item.plannedPublishDate?.startsWith(targetKey)).map((item) => `${item.plannedPublishDate}|${item.productId}|${item.type}|${item.title.trim().toLowerCase()}`)); const clonedContent = previous.content.filter((item) => item.plannedPublishDate?.startsWith(sourceKey)).filter((item) => { const plannedDate = moveDateToMonth(item.plannedPublishDate!, month); const key = `${plannedDate}|${item.productId}|${item.type}|${item.title.trim().toLowerCase()}`; if (targetContentKeys.has(key)) return false; targetContentKeys.add(key); return true; }).map((item) => ({ ...item, id: makeId("content"), plannedPublishDate: moveDateToMonth(item.plannedPublishDate!, month), actualPublishDate: undefined, status: "approval" as const, createdAt: TODAY, updatedAt: TODAY })); copiedCalendar = clonedContent.length; return { ...previous, content: [...clonedContent, ...previous.content], plans: { ...previous.plans, [targetKey]: { ...targetPlan, month: targetKey, platforms: nextPlatforms, channels: nextChannels, weekdays: nextWeekdays } } }; }); notify(copiedCells || copiedCalendar ? `Перенесено: ${copiedCells} ячеек плана · ${copiedCalendar} записей календаря` : `В ${monthLabel(month).toLowerCase()} уже есть этот план`); }
+  function copyPreviousMonth() {
+    const sourceMonth = subMonths(month, 1);
+    const sourceKey = monthKey(sourceMonth);
+    const targetKey = monthKey(month);
+    const sourceDraftCount = state.content.filter((item) => item.plannedPublishDate?.startsWith(sourceKey)).length;
+    const publishedContentIds = new Set(state.publications.map((publication) => publication.contentId));
+    const targetDraftCount = state.content.filter((item) =>
+      item.plannedPublishDate?.startsWith(targetKey) && item.status !== "published" && !publishedContentIds.has(item.id),
+    ).length;
+
+    if (!window.confirm(`Текущий месяц будет заменён копией прошлого. ${targetDraftCount} текущих черновых записей будут удалены; опубликованный факт сохранится. Продолжить?`)) return;
+
+    setState((previous) => {
+      const sourcePlan = getOrCreatePlan(previous, sourceKey);
+      const clonedContent = previous.content
+        .filter((item) => item.plannedPublishDate?.startsWith(sourceKey))
+        .map((item) => ({
+          ...item,
+          id: makeId("content"),
+          plannedShootDate: item.plannedShootDate?.startsWith(sourceKey)
+            ? moveDateToMonth(item.plannedShootDate, month)
+            : item.plannedShootDate,
+          plannedPublishDate: moveDateToMonth(item.plannedPublishDate!, month),
+          actualShootDate: undefined,
+          actualPublishDate: undefined,
+          status: "approval" as const,
+          createdAt: TODAY,
+          updatedAt: TODAY,
+        }));
+      const publishedContentIds = new Set(previous.publications.map((publication) => publication.contentId));
+      const retainedContent = previous.content.filter((item) => {
+        const belongsToTargetMonth = item.plannedPublishDate?.startsWith(targetKey);
+        const isPublishedFact = item.status === "published" || publishedContentIds.has(item.id);
+        return !belongsToTargetMonth || isPublishedFact;
+      });
+
+      const cloneNestedMap = <T extends Record<string, unknown>>(map: Record<string, T> | undefined) =>
+        Object.fromEntries(Object.entries(map ?? {}).map(([key, value]) => [key, { ...value }]));
+
+      return {
+        ...previous,
+        content: [...clonedContent, ...retainedContent],
+        plans: {
+          ...previous.plans,
+          [targetKey]: {
+            ...sourcePlan,
+            month: targetKey,
+            totals: { ...sourcePlan.totals },
+            products: cloneNestedMap(sourcePlan.products),
+            platforms: cloneNestedMap(sourcePlan.platforms),
+            channels: cloneNestedMap(sourcePlan.channels),
+            weekdays: cloneNestedMap(sourcePlan.weekdays),
+          },
+        },
+      };
+    });
+    notify(`План ${monthLabel(month).toLowerCase()} заменён копией прошлого месяца: перенесено ${sourceDraftCount} записей, факт сохранён`);
+  }
   function markCalendarTaskComplete(contentId: string) {
     const target = state.content.find((item) => item.id === contentId);
     if (!target) { notify("Материал календаря не найден"); return; }
