@@ -635,6 +635,10 @@ body {
   color: var(--app-text);
 }
 
+.app-shell.has-page-background {
+  background: transparent !important;
+}
+
 .app-sidebar {
   background: var(--app-sidebar) !important;
 }
