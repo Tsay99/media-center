@@ -1203,7 +1203,7 @@ function WorkReport({ state, month, setMonth, products, platforms, plan, readOnl
         </div>
       </div>
     </section>
-    <section className="mt-4 rounded-2xl bg-gray-50/70 p-4 sm:p-5">
+    <section className="mt-4">
       <div className={`grid ${gridMobileColumns} ${gridDesktopColumns}`} style={{ gap: `${Math.min(32, Math.max(4, visualLayout.productGrid.gapPx ?? 12))}px` }}>{displayProductRows.map((row, index) => <ProductReportCard key={row.product.id} {...row} index={index} onOpen={() => setSelectedProductId(row.product.id)} />)}</div>
     </section>
     {selectedProductRow && <ProductDetailsDialog state={state} month={month} product={selectedProductRow.product} planned={selectedProductRow.planned} fact={selectedProductRow.fact} completion={selectedProductRow.completion} platforms={platforms} plan={plan} actual={actual} onClose={() => setSelectedProductId(null)} />}
@@ -2035,7 +2035,7 @@ function LegacyDirectoryModal({ kind, state, month, plan, actual, onSwitch, onAd
 
   return <div className="directory-page">
     <PageHeader eyebrow="Настройки" title="Справочники" description="Управляйте продуктами, соцсетями, цветами и порядком отображения" />
-    <section className="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm sm:p-5">
+    <section className="directory-glass-block rounded-2xl p-4 sm:p-5">
     <div className="mb-4 max-w-sm rounded-xl border border-gray-200 bg-gray-50/70 p-3"><Label>Раздел справочника</Label><Select value={kind} onValueChange={(value) => onSwitch(value as DirectoryKind)} options={[{ id: "products", textValue: "Продукты", label: <span className="flex items-center gap-2"><Package size={14} /> Продукты</span> }, { id: "platforms", textValue: "Соцсети", label: <span className="flex items-center gap-2"><Share2 size={14} /> Соцсети</span> }]} className="mt-1"><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox><ListBox.Item id="products" textValue="Продукты"><span className="flex items-center gap-2"><Package size={14} /> Продукты</span><ListBox.ItemIndicator /></ListBox.Item><ListBox.Item id="platforms" textValue="Соцсети"><span className="flex items-center gap-2"><Share2 size={14} /> Соцсети</span><ListBox.ItemIndicator /></ListBox.Item></ListBox></Select.Popover></Select><Description>Переключайте каталог без потери введённых данных.</Description></div>
     <form onSubmit={submit} className="flex flex-col gap-2 rounded-2xl border border-gray-100 bg-gray-50/70 p-3 sm:flex-row sm:flex-wrap">
       <input className={`${inputClass} min-w-0 flex-1`} value={value} onChange={(event) => setValue(event.target.value)} placeholder={kind === "products" ? "Новый продукт" : "Новая соцсеть"} />
@@ -2176,7 +2176,7 @@ function DirectoryCatalog({ kind, state, onSwitch, onAdd, onRename, onToggleArch
 
   return <div className="directory-page">
 
-    <section className="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm sm:p-5">
+    <section className="directory-glass-block rounded-2xl p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0 sm:max-w-sm"><Label>Каталог</Label><AppSelect value={kind} onChange={(value) => onSwitch(value as DirectoryKind)} options={directoryOptions} ariaLabel="Выберите каталог" className="mt-1" /><Description>Выберите продукты или соцсети. Поля сохраняются в карточке.</Description></div><div className="flex items-center gap-2"><div className="text-xs text-gray-400">{kind === "products" ? `${products.length} продуктов` : `${platforms.length} соцсетей`}</div><Button onClick={openAdd}><Plus size={15} /> Добавить</Button></div></div>
       <div className="mt-5"><ExampleUsage products={kind === "products" ? products : []} platforms={kind === "platforms" ? platforms : []} onProductEdit={(id) => { const product = products.find((item) => item.id === id); if (product) beginEditProduct(product); }} onProductArchive={(id) => onToggleArchive("products", id)} onProductMove={(id, direction) => onMove("products", id, direction)} onPlatformEdit={(id) => { const platform = platforms.find((item) => item.id === id); if (platform) beginEditPlatform(platform); }} onPlatformArchive={(id) => onToggleArchive("platforms", id)} onPlatformMove={(id, direction) => onMove("platforms", id, direction)} /></div>
     </section>
