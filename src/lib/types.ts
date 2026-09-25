@@ -171,7 +171,7 @@ export const KANBAN_COLUMNS: { id: ContentStatus; label: string }[] = [
   { id: "shoot", label: "Съемка" },
   { id: "shot", label: "Отснято" },
   { id: "editing", label: "Монтаж" },
-  { id: "published", label: "Выложено" },
+  { id: "published", label: "Опубликовано" },
 ];
 
 export const ACTIVITY_TYPES: ActivityType[] = [

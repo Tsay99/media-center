@@ -39,12 +39,13 @@ npm run build
 
 ## Данные и Supabase
 
-Для общей версии создайте проект Supabase, в Authentication → Users создайте владельца с email и паролем `1431999`, замените `OWNER_EMAIL` в `database/002_shared_workspace.sql` на этот email и выполните миграции `database/001_initial_schema.sql` и `database/002_shared_workspace.sql` в SQL Editor. Затем создайте `.env.local` на основе `.env.example`:
+Для общей версии создайте проект Supabase и добавьте пользователей владельца и дизайнера в Authentication → Users. Пароли хранятся только в Supabase Auth и никогда не добавляются в репозиторий или клиентский код. Замените `OWNER_EMAIL` в `database/002_shared_workspace.sql` на email владельца и выполните миграции `database/001_initial_schema.sql` и `database/002_shared_workspace.sql` в SQL Editor. Затем создайте `.env.local` на основе `.env.example`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 NEXT_PUBLIC_OWNER_EMAIL=
+NEXT_PUBLIC_DESIGNER_EMAIL=
 ```
 
 В браузер можно передавать только URL и publishable/anon key при включенном Row Level Security. `service_role`/secret key не добавляйте в клиентский код.
@@ -55,7 +56,7 @@ NEXT_PUBLIC_OWNER_EMAIL=
 
 Проект `content-plan-fact` подключён к GitHub-репозиторию `Tsay99/media-center`. GitHub — источник истины: Preview создаётся для pull request, а production — после merge в `main`. Вручную `vercel --prod` используйте только для аварийного восстановления или rollback.
 
-В Project Settings → Environment Variables должны быть добавлены те же три переменные Supabase для Production, Preview и Development. После этого каждый Git-деплой собирает Next.js с общей базой.
+В Project Settings → Environment Variables должны быть добавлены переменные Supabase и email дизайнера для Production, Preview и Development. После этого каждый Git-деплой собирает Next.js с общей базой.
 
 ## Структура
 
