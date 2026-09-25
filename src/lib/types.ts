@@ -130,36 +130,44 @@ export type VisualLayout = {
   pageHeader?: {
     tone?: "blue" | "violet" | "emerald";
     align?: "left" | "center";
-    density?: "compact" | "comfortable";
+    paddingXpx?: number;
+    paddingYpx?: number;
+    radiusPx?: number;
+    titleSizePx?: number;
     showEyebrow?: boolean;
   };
   productGrid?: {
     columnsDesktop?: 2 | 3 | 4;
     columnsMobile?: 1 | 2;
-    gap?: "compact" | "comfortable";
+    gapPx?: number;
     sort?: "manual" | "completion" | "name";
   };
   metricCards?: {
     columnsDesktop?: 2 | 3 | 4;
     columnsMobile?: 1 | 2;
+    gapPx?: number;
     showPlan?: boolean;
     showFact?: boolean;
     showCompletion?: boolean;
     showActiveDays?: boolean;
   };
   sidebar?: {
-    density?: "compact" | "comfortable";
     tone?: "navy" | "slate" | "indigo";
     showTagline?: boolean;
+    navItemHeightPx?: number;
+    navGapPx?: number;
+    logoOffsetLeftPx?: number;
+    logoOffsetTopPx?: number;
   };
   calendarToolbar?: {
-    density?: "compact" | "comfortable";
+    paddingYpx?: number;
+    gapPx?: number;
     showViewSwitch?: boolean;
     showFilters?: boolean;
   };
   background?: {
-    overlay?: "none" | "soft" | "strong";
-    blur?: "none" | "soft";
+    overlayOpacityPercent?: number;
+    blurPx?: number;
   };
 };
 

@@ -216,9 +216,7 @@ export function distributeContent(input: DistributionInput): DistributionResult 
     const current = targetCounts.get(series.id) ?? 0;
     const required = Math.max(0, series.monthlyCount - current);
     if (!required) return;
-    const seriesDates = isFlexibleThreads(series.format)
-      ? monthDates(input.targetMonth).filter((date) => !excludedDates.has(date))
-      : dates;
+    const seriesDates = dates;
     if (!seriesDates.length) { warnings.push({ code: "NO_ALLOWED_DATES", message: `${series.productName} · ${series.format}: нет доступных дат`, seriesId: series.id }); return; }
     const datesForSeries = [...(existingDates.get(series.id) ?? [])];
     for (let index = 0; index < required; index += 1) {
@@ -228,7 +226,7 @@ export function distributeContent(input: DistributionInput): DistributionResult 
       const candidates = seriesDates.filter((date) => {
         const state = dayState(states, date);
         const sameSeriesCount = state.series.get(series.id) ?? 0;
-        if (!isFlexibleThreads(series.format) && !allowedWeekday(series, date, workingWeekdays)) return false;
+        if (!allowedWeekday(series, date, workingWeekdays)) return false;
         if (sameSeriesCount >= (series.maxPerDay ?? 1)) return false;
         if (!isFlexibleThreads(series.format) && state.count >= maxPublicationsPerDay) return false;
         if (!isFlexibleThreads(series.format) && state.load + (series.weight ?? DEFAULT_WEIGHTS[series.format] ?? 1) > maxDailyLoad) return false;
@@ -241,7 +239,7 @@ export function distributeContent(input: DistributionInput): DistributionResult 
         return true;
       });
       if (!candidates.length) {
-        const hasDates = seriesDates.some((date) => isFlexibleThreads(series.format) || allowedWeekday(series, date, workingWeekdays));
+        const hasDates = seriesDates.some((date) => allowedWeekday(series, date, workingWeekdays));
         warnings.push({ code: hasDates ? "DAILY_LIMIT_EXCEEDED" : "NO_ALLOWED_DATES", message: `${series.productName} · ${series.format}: не удалось разместить ${required - index} публикаций`, seriesId: series.id });
         break;
       }
