@@ -126,6 +126,48 @@ export type PersonalTask = {
   updatedAt: string;
 };
 
+export type VisualLayout = {
+  pageHeader?: {
+    tone?: "blue" | "violet" | "emerald";
+    align?: "left" | "center";
+    density?: "compact" | "comfortable";
+    showEyebrow?: boolean;
+  };
+  productGrid?: {
+    columnsDesktop?: 2 | 3 | 4;
+    columnsMobile?: 1 | 2;
+    gap?: "compact" | "comfortable";
+    sort?: "manual" | "completion" | "name";
+  };
+  metricCards?: {
+    columnsDesktop?: 2 | 3 | 4;
+    columnsMobile?: 1 | 2;
+    showPlan?: boolean;
+    showFact?: boolean;
+    showCompletion?: boolean;
+    showActiveDays?: boolean;
+  };
+  sidebar?: {
+    density?: "compact" | "comfortable";
+    tone?: "navy" | "slate" | "indigo";
+    showTagline?: boolean;
+  };
+  calendarToolbar?: {
+    density?: "compact" | "comfortable";
+    showViewSwitch?: boolean;
+    showFilters?: boolean;
+  };
+  background?: {
+    overlay?: "none" | "soft" | "strong";
+    blur?: "none" | "soft";
+  };
+};
+
+export type VisualEditorSettings = {
+  puckData?: Record<string, unknown>;
+  layout?: VisualLayout;
+};
+
 export type SiteSettings = {
   brandName: string;
   brandTagline: string;
@@ -143,6 +185,7 @@ export type SiteSettings = {
   backgroundOpacity?: number;
   backgroundPositionX?: number;
   backgroundPositionY?: number;
+  visualEditor?: VisualEditorSettings;
   guestViews: string[];
   showSyncStatus: boolean;
   showContact: boolean;
