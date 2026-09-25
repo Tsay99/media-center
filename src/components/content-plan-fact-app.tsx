@@ -1038,7 +1038,7 @@ function ProductReportCard({ product, planned, fact, completion, index, platform
     event.currentTarget.style.setProperty("--spotlight-x", String(event.clientX - rect.left) + "px");
     event.currentTarget.style.setProperty("--spotlight-y", String(event.clientY - rect.top) + "px");
   };
-  return <article data-tour="product-card" role="button" tabIndex={0} aria-label={"Открыть подробности продукта " + product.name} onClick={onOpen} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen(); } }} onPointerMove={updateSpotlight} style={{ "--spotlight-color": withAlpha(color, 0.14) } as CSSProperties} className="product-report-card group relative isolate min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm ring-1 ring-gray-950/[.02] transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400/40">
+  return <article data-tour="product-card" role="button" tabIndex={0} aria-label={"Открыть подробности продукта " + product.name} onClick={onOpen} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen(); } }} onPointerMove={updateSpotlight} style={{ "--spotlight-color": withAlpha(color, 0.14) } as CSSProperties} className="product-report-card group relative isolate min-w-0 cursor-pointer overflow-hidden rounded-2xl bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400/40">
     <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-1 opacity-90" style={{ background: "linear-gradient(90deg, " + color + ", transparent)" }} />
     <div className="relative z-[1]">
       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-gray-400">Продукт</p><h3 className="mt-0.5 line-clamp-2 text-base font-bold leading-tight tracking-tight text-gray-900 sm:text-lg"><Highlighter action="highlight" color={withAlpha(color, 0.25)} strokeWidth={1.25} animationDuration={760} iterations={2} isView>{product.name}</Highlighter></h3></div><span data-tour="completion-ring" className="shrink-0"><CompletionRing value={completion} color={color} compact /></span></div>
@@ -1203,7 +1203,7 @@ function WorkReport({ state, month, setMonth, products, platforms, plan, readOnl
         </div>
       </div>
     </section>
-    <section className="mt-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 sm:p-5">
+    <section className="mt-4 rounded-2xl bg-gray-50/70 p-4 sm:p-5">
       <div className={`grid ${gridMobileColumns} ${gridDesktopColumns}`} style={{ gap: `${Math.min(32, Math.max(4, visualLayout.productGrid.gapPx ?? 12))}px` }}>{displayProductRows.map((row, index) => <ProductReportCard key={row.product.id} {...row} index={index} onOpen={() => setSelectedProductId(row.product.id)} />)}</div>
     </section>
     {selectedProductRow && <ProductDetailsDialog state={state} month={month} product={selectedProductRow.product} planned={selectedProductRow.planned} fact={selectedProductRow.fact} completion={selectedProductRow.completion} platforms={platforms} plan={plan} actual={actual} onClose={() => setSelectedProductId(null)} />}
