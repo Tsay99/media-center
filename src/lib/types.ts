@@ -138,6 +138,8 @@ export type SiteSettings = {
   logoSidebarHorizontalPadding?: number;
   logoSidebarTopOffset?: number;
   logoContainerBackground?: "transparent" | "white" | "sidebar";
+  backgroundImage?: string;
+  backgroundImages?: Record<string, string>;
   guestViews: string[];
   showSyncStatus: boolean;
   showContact: boolean;

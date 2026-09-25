@@ -72,7 +72,8 @@ const GUEST_NAV_ORDER: View[] = ["dashboard", "calendar", "load"];
 const TASKS_STORAGE_KEY = "content-plan-fact-personal-tasks-v1";
 const inputClass = "ui-input";
 const REPORT_COLORS = ["#2563eb", "#0891b2", "#db2777", "#4f46e5", "#059669", "#d97706"];
-const DEFAULT_SITE_SETTINGS: SiteSettings = { brandName: "Медиа Центр", brandTagline: "By Tsay Maxim", logoSrc: "/media-center-logo.png", logoScale: 100, logoContainerWidth: 216, logoContainerHeight: 44, logoContainerRadius: 12, logoContainerPadding: 8, logoSidebarHorizontalPadding: 20, logoSidebarTopOffset: 22, logoContainerBackground: "transparent", guestViews: ["dashboard", "calendar", "load"], showSyncStatus: true, showContact: true };
+const DEFAULT_BACKGROUND_IMAGE = "https://cdn.21st.dev/assets/mirror/4a/4a036b28b8c09c74e3c094c95910fc41dfad836e8f93894f3f9b26b56ec20f63.jpg";
+const DEFAULT_SITE_SETTINGS: SiteSettings = { brandName: "Медиа Центр", brandTagline: "By Tsay Maxim", logoSrc: "/media-center-logo.png", logoScale: 100, logoContainerWidth: 216, logoContainerHeight: 44, logoContainerRadius: 12, logoContainerPadding: 8, logoSidebarHorizontalPadding: 20, logoSidebarTopOffset: 22, logoContainerBackground: "transparent", backgroundImage: DEFAULT_BACKGROUND_IMAGE, backgroundImages: {}, guestViews: ["dashboard", "calendar", "load"], showSyncStatus: true, showContact: true };
 const ALL_PRODUCTS_ID = "__all-products__";
 const PRODUCT_WEEKDAYS_KEY = "__product__";
 const CONTENT_PLATFORM_MAP: Record<ContentType, string> = { Reels: "Instagram", Пост: "Instagram", Stories: "Instagram", Threads: "Threads", TikTok: "TikTok", LinkedIn: "LinkedIn", YouTube: "YouTube", Shorts: "YouTube", Другое: "Instagram" };
@@ -111,6 +112,9 @@ const SOCIAL_ICONS: Record<string, { Icon: IconType; color: string }> = {
 };
 function SocialPlatformIcon({ name, size = 14 }: { name: string; size?: number }) { const entry = SOCIAL_ICONS[name.trim().toLowerCase()]; if (!entry) return <Share2 size={size} aria-hidden="true" className="text-gray-400" />; const { Icon, color } = entry; return <Icon size={size} aria-hidden="true" style={{ color }} />; }
 function logoContainerBackgroundClass(background: SiteSettings["logoContainerBackground"]) { if (background === "white") return "bg-white"; if (background === "sidebar") return "bg-[#0e1d35]"; return "bg-transparent"; }
+function normalizeImageSource(value?: string) { const source = value?.trim() ?? ""; return /^(https?:\/\/|\/|data:image\/)/i.test(source) ? source : ""; }
+function backgroundForView(settings: SiteSettings, view: View) { return normalizeImageSource(settings.backgroundImages?.[view]) || normalizeImageSource(settings.backgroundImage); }
+function viewLabel(view: string) { return NAV_ITEMS.find((item) => item.id === view)?.label ?? view; }
 function normalizeState(value: AppState): AppState { const fallback = cloneDemoState(); const plans = Object.fromEntries(Object.entries(value.plans ?? {}).map(([key, plan]) => [key, { ...plan, platforms: plan.platforms ?? fallback.plans[key]?.platforms ?? {} }])); return { ...fallback, ...value, plans, siteSettings: { ...DEFAULT_SITE_SETTINGS, ...(value.siteSettings ?? {}), guestViews: value.siteSettings?.guestViews?.length ? value.siteSettings.guestViews : DEFAULT_SITE_SETTINGS.guestViews } }; }
 function platformNameForContentType(type: ContentType) { return CONTENT_PLATFORM_MAP[type] ?? "Instagram"; }
 function platformIdForContentType(type: ContentType, platforms: Platform[]) { const name = platformNameForContentType(type).toLowerCase(); return platforms.find((platform) => platform.name.trim().toLowerCase() === name)?.id; }
@@ -191,6 +195,7 @@ function OwnerLoginDialog({ onClose, onLogin }: { onClose: () => void; onLogin: 
 }
 function SiteSettingsPage({ settings, onUpdate, onNotify }: { settings: SiteSettings; onUpdate: (patch: Partial<SiteSettings>) => void; onNotify: (message: string) => void }) {
   const [draft, setDraft] = useState<SiteSettings>(settings);
+  const [backgroundTarget, setBackgroundTarget] = useState<"all" | View>("all");
   const guestOptions = NAV_ITEMS.filter((item) => GUEST_NAV_ORDER.includes(item.id));
   const logoScale = Math.min(140, Math.max(60, draft.logoScale ?? DEFAULT_SITE_SETTINGS.logoScale ?? 100));
   const logoContainerWidth = Math.min(228, Math.max(160, draft.logoContainerWidth ?? DEFAULT_SITE_SETTINGS.logoContainerWidth ?? 216));
@@ -199,6 +204,8 @@ function SiteSettingsPage({ settings, onUpdate, onNotify }: { settings: SiteSett
   const logoContainerPadding = Math.min(24, Math.max(0, draft.logoContainerPadding ?? DEFAULT_SITE_SETTINGS.logoContainerPadding ?? 8));
   const logoSidebarHorizontalPadding = Math.min(32, Math.max(0, draft.logoSidebarHorizontalPadding ?? DEFAULT_SITE_SETTINGS.logoSidebarHorizontalPadding ?? 20));
   const logoSidebarTopOffset = Math.min(32, Math.max(0, draft.logoSidebarTopOffset ?? DEFAULT_SITE_SETTINGS.logoSidebarTopOffset ?? 22));
+  const selectedBackground = backgroundTarget === "all" ? draft.backgroundImage ?? "" : draft.backgroundImages?.[backgroundTarget] ?? "";
+  const previewBackground = selectedBackground || (backgroundTarget !== "all" ? draft.backgroundImage ?? "" : "");
 
   function updateDraft(patch: Partial<SiteSettings>) { setDraft((current) => ({ ...current, ...patch })); }
   function handleLogo(event: ChangeEvent<HTMLInputElement>) {
@@ -213,12 +220,38 @@ function SiteSettingsPage({ settings, onUpdate, onNotify }: { settings: SiteSett
     reader.onload = () => updateDraft({ logoSrc: typeof reader.result === "string" ? reader.result : undefined });
     reader.readAsDataURL(file);
   }
+  function updateBackground(value: string) {
+    setDraft((current) => backgroundTarget === "all"
+      ? { ...current, backgroundImage: value }
+      : { ...current, backgroundImages: { ...(current.backgroundImages ?? {}), [backgroundTarget]: value } });
+  }
+  function handleBackground(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 1_500_000) {
+      onNotify("Выберите изображение до 1,5 МБ");
+      event.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => updateBackground(typeof reader.result === "string" ? reader.result : "");
+    reader.readAsDataURL(file);
+  }
+  function clearBackground() {
+    if (backgroundTarget === "all") updateDraft({ backgroundImage: "" });
+    else {
+      const next = { ...(draft.backgroundImages ?? {}) };
+      delete next[backgroundTarget];
+      updateDraft({ backgroundImages: next });
+    }
+  }
   function toggleGuestView(id: View) {
     const next = draft.guestViews.includes(id) ? draft.guestViews.filter((value) => value !== id) : [...draft.guestViews, id];
     updateDraft({ guestViews: next });
   }
   function save() {
-    onUpdate({ ...draft, brandName: draft.brandName.trim() || DEFAULT_SITE_SETTINGS.brandName, brandTagline: draft.brandTagline.trim() || DEFAULT_SITE_SETTINGS.brandTagline, guestViews: draft.guestViews.length ? draft.guestViews : ["dashboard"] });
+    const backgroundImages = Object.fromEntries(Object.entries(draft.backgroundImages ?? {}).filter(([, value]) => Boolean(normalizeImageSource(value))));
+    onUpdate({ ...draft, brandName: draft.brandName.trim() || DEFAULT_SITE_SETTINGS.brandName, brandTagline: draft.brandTagline.trim() || DEFAULT_SITE_SETTINGS.brandTagline, backgroundImage: normalizeImageSource(draft.backgroundImage), backgroundImages, guestViews: draft.guestViews.length ? draft.guestViews : ["dashboard"] });
   }
 
   return <div className="grid gap-5">
@@ -236,6 +269,17 @@ function SiteSettingsPage({ settings, onUpdate, onNotify }: { settings: SiteSett
             <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => updateDraft({ logoSrc: DEFAULT_SITE_SETTINGS.logoSrc })}><RotateCcw size={14} /> Вернуть логотип</Button><Button onClick={save}><Check size={14} /> Сохранить</Button></div>
           </div>
           <div className="grid min-h-40 place-items-center rounded-2xl border border-gray-200 bg-[#0e1d35] p-4"><div className="grid gap-3 text-center"><div className={`mx-auto flex items-center justify-center overflow-hidden px-2 ${logoContainerBackgroundClass(draft.logoContainerBackground)}`} style={{ width: `${Math.min(220, logoContainerWidth)}px`, height: `${Math.min(58, logoContainerHeight)}px`, borderRadius: `${logoContainerRadius}px`, padding: `${logoContainerPadding}px` }}><Image src={draft.logoSrc || DEFAULT_SITE_SETTINGS.logoSrc!} alt="Предпросмотр логотипа" width={216} height={80} unoptimized style={{ transform: `scale(${logoScale / 100})` }} className="h-full w-full object-contain" /></div><div><p className="text-sm font-bold text-white">{draft.brandName || "Без названия"}</p><p className="mt-0.5 text-xs text-white/50">{draft.brandTagline || "Без подписи"}</p></div></div></div>
+        </div>
+      </section>
+      <section className="rounded-[var(--app-radius-lg)] border border-[var(--app-border)] bg-white p-4 shadow-sm sm:p-5">
+        <SectionTitle title="Фон страниц" />
+        <p className="mt-1 text-xs leading-5 text-gray-500">Задайте изображение для всех страниц или отдельное переопределение. Фон приглушается автоматически, чтобы текст оставался читаемым.</p>
+        <div className="mt-4 grid gap-3">
+          <Field label="Где применять"><AppSelect value={backgroundTarget} onChange={(value) => setBackgroundTarget(value === "all" ? "all" : value as View)} options={[{ id: "all", label: "Все страницы" }, ...NAV_ITEMS.map((item) => ({ id: item.id, label: item.label }))]} ariaLabel="Область фонового изображения" /></Field>
+          <label className="grid gap-1.5 text-sm"><span className="text-xs font-semibold text-gray-500">Изображение-файл</span><input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleBackground} className="block w-full rounded-xl border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-xs text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-blue-700" /><span className="text-[11px] text-gray-400">Можно загрузить файл до 1,5 МБ или использовать ссылку ниже.</span></label>
+          <Field label="Ссылка на изображение"><input className={inputClass} value={selectedBackground} onChange={(event) => updateBackground(event.target.value)} placeholder="https://..." inputMode="url" /></Field>
+          <div className="relative min-h-32 overflow-hidden rounded-2xl border border-gray-200 bg-gray-100"><div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: previewBackground ? `url("${previewBackground.replace(/"/g, "\\\"")}")` : undefined }} /><div className="absolute inset-0 bg-slate-950/35" /><div className="relative flex min-h-32 items-center justify-center px-4 text-center text-xs font-semibold text-white drop-shadow">{previewBackground ? `Предпросмотр: ${backgroundTarget === "all" ? "все страницы" : selectedBackground ? viewLabel(backgroundTarget) : "наследуется общий фон"}` : "Фон не задан"}</div></div>
+          <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={clearBackground}><X size={14} /> Убрать этот фон</Button><Button onClick={save}><Check size={14} /> Сохранить фон</Button></div>
         </div>
       </section>
       <section className="rounded-[var(--app-radius-lg)] border border-[var(--app-border)] bg-white p-4 shadow-sm sm:p-5">
@@ -568,9 +612,11 @@ function markPlannedRangeAsPublished(startDate: string, endDate: string, platfor
   const visibleNavItems = role !== "owner" ? NAV_ITEMS.filter((item) => GUEST_NAV_ORDER.includes(item.id) && guestViewIds.includes(item.id)) : NAV_ITEMS;
   const guestTourViews = visibleNavItems.map((item) => item.id).filter((id): id is "dashboard" | "calendar" | "load" => id === "dashboard" || id === "calendar" || id === "load");
   const onNotify = notify;
+  const pageBackground = backgroundForView(siteSettings, view);
 
   return (
-    <div className="app-shell min-h-screen bg-[#f7f8fc] text-gray-900">
+    <div className={`app-shell relative min-h-screen bg-[#f7f8fc] text-gray-900 ${pageBackground ? "has-page-background" : ""}`}>
+      {pageBackground && <><div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-25" style={{ backgroundImage: `url(${pageBackground})` }} /><div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 bg-[#f3f6fb]/80" /></>}
       <WorkspaceSidebar view={view} visibleNavItems={visibleNavItems} openView={openView} role={role} siteSettings={siteSettings} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} onLogout={logout} onLogin={() => setOwnerLoginOpen(true)} />
       {mobileOpen && <button type="button" aria-label="Закрыть меню" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-[#080916]/35 lg:hidden" />}
       <main className={`relative z-10 min-h-screen min-w-0 overflow-x-clip transition-[padding] ${sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}`}>
