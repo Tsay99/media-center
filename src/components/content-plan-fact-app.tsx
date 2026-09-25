@@ -635,7 +635,19 @@ function markPlannedRangeAsPublished(startDate: string, endDate: string, platfor
   );
 }
 
-function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title?: string; description?: string; actions?: ReactNode }) { return <div className="app-page-header mb-3 flex flex-col justify-between gap-2 md:mb-4 md:flex-row md:items-end"><div className="min-w-0"><p className="mb-0.5 text-[11px] font-bold uppercase tracking-[.14em] text-blue-700">{eyebrow}</p>{title && <h2 className="text-2xl font-bold leading-tight tracking-tight text-gray-900">{title}</h2>}{description && <p className="mt-0.5 max-w-3xl text-sm leading-5 text-gray-500">{description}</p>}</div>{actions && <div className="flex flex-wrap items-center gap-2 print:hidden">{actions}</div>}</div>; }
+function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title?: string; description?: string; actions?: ReactNode }) {
+  return <header className="app-page-header relative mb-4 overflow-hidden rounded-2xl border border-blue-100/80 bg-blue-50 shadow-sm">
+    <AnimatedGradient colors={["#bfdbfe", "#93c5fd", "#c4b5fd", "#a7f3d0"]} speed={0.035} blur="medium" />
+    <div className="relative z-10 flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
+      <div className="min-w-0">
+        {eyebrow && <p className="text-[11px] font-bold uppercase tracking-[.14em] text-blue-800/75">{eyebrow}</p>}
+        {title && <h2 className="mt-1 text-xl font-bold leading-tight tracking-tight text-blue-950 sm:text-2xl">{title}</h2>}
+        {description && <p className="mt-1 max-w-3xl text-sm leading-5 text-blue-950/70">{description}</p>}
+      </div>
+      {actions && <div className="flex w-full flex-wrap items-center gap-2 print:hidden sm:w-auto sm:justify-end">{actions}</div>}
+    </div>
+  </header>;
+}
 
 type CalendarTaskProjection = {
   kind: "calendar";
