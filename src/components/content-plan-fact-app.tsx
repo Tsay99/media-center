@@ -28,8 +28,33 @@ import { Tooltip as AppTooltip, TooltipContent as AppTooltipContent, TooltipProv
 import { motion } from "motion/react";
 import { Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, CalendarDays, Check, ChevronLeft, ChevronRight, ClipboardList, Clock3, Download, Gauge, KeyRound, LayoutGrid, List, LogIn, LogOut, Menu, MessageCircle, Package, Pencil, Plus, RotateCcw, Search, Settings, Share2, SlidersHorizontal, Sparkles, Target, Trash2, Upload, X } from "lucide-react";
 
-function ChartPlaceholder() {
-  return <div className="mt-4 grid gap-4 xl:grid-cols-2"><div className="h-[250px] animate-pulse rounded-2xl border border-gray-100 bg-gray-50" /><div className="h-[250px] animate-pulse rounded-2xl border border-gray-100 bg-gray-50" /></div>;
+function ChartPlaceholder({ className = "mt-4" }: { className?: string } = {}) {
+  return <div className={`${className} grid gap-4 xl:grid-cols-2`.trim()}><div className="h-[250px] animate-pulse rounded-2xl border border-gray-100 bg-gray-50" /><div className="h-[250px] animate-pulse rounded-2xl border border-gray-100 bg-gray-50" /></div>;
+}
+
+function DeferredRender({ children, fallback, className = "" }: { children: ReactNode; fallback: ReactNode; className?: string }) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const [shouldRender, setShouldRender] = useState(false);
+
+  // The observer prevents below-the-fold chart libraries from loading during the first mobile render.
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host || !("IntersectionObserver" in window)) {
+      setShouldRender(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      setShouldRender(true);
+      observer.disconnect();
+    }, { rootMargin: "320px 0px" });
+
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
+
+  return <div ref={hostRef} className={className}>{shouldRender ? children : fallback}</div>;
 }
 
 const ReportCharts = dynamic(() => import("./ui/report-charts").then((module) => module.ReportCharts), { ssr: false, loading: () => <ChartPlaceholder /> });
@@ -1208,13 +1233,15 @@ function WorkReport({ state, month, setMonth, products, platforms, plan, readOnl
     </section>
     {selectedProductRow && <ProductDetailsDialog state={state} month={month} product={selectedProductRow.product} planned={selectedProductRow.planned} fact={selectedProductRow.fact} completion={selectedProductRow.completion} platforms={platforms} plan={plan} actual={actual} onClose={() => setSelectedProductId(null)} />}
 
-    <ReportCharts
-      dailyData={dailyData}
-      platformChartData={platformChartData}
-      productChartData={productChartData}
-      monthLabel={monthLabel(month)}
-      readOnly={readOnly}
-    />
+    <DeferredRender className="mt-4" fallback={<ChartPlaceholder className="mt-0" />}>
+      <ReportCharts
+        dailyData={dailyData}
+        platformChartData={platformChartData}
+        productChartData={productChartData}
+        monthLabel={monthLabel(month)}
+        readOnly={readOnly}
+      />
+    </DeferredRender>
     <section className="report-card mt-4 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3"><div><SectionTitle title="Сводка по продуктам" /><p className="mt-1 text-xs text-gray-500">Показатели, которые удобно использовать в отчёте</p></div><Badge>{productRows.length} продуктов</Badge></div>
       <div className="mt-4 hidden overflow-x-auto sm:block"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-gray-100 text-[11px] uppercase tracking-wide text-gray-400"><th className="px-3 py-2 font-semibold">Продукт</th><th className="px-3 py-2 text-right font-semibold">План</th><th className="px-3 py-2 text-right font-semibold">Факт</th><th className="px-3 py-2 text-right font-semibold">Выполнение</th></tr></thead><tbody>{productRows.map((row) => <tr key={row.product.id} className="border-b border-gray-50 last:border-0"><td className="px-3 py-3 font-semibold text-gray-900">{row.product.name}</td><td className="px-3 py-3 text-right text-gray-500">{row.planned}</td><td className="px-3 py-3 text-right font-semibold text-gray-900">{row.fact}</td><td className="px-3 py-3 text-right"><span className={row.completion >= 100 ? "font-bold text-emerald-600" : "font-bold text-blue-700"}>{row.completion}%</span></td></tr>)}</tbody></table></div>
