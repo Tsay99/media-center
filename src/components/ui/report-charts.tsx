@@ -78,7 +78,7 @@ export function ReportCharts({
 }) {
   return (
     <>
-      <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,.8fr)]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,.8fr)]">
         <section className="report-card min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div>

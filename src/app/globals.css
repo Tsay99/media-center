@@ -292,6 +292,13 @@ body {
   color: #15231f;
 }
 
+@supports (content-visibility: auto) {
+  .report-page > section {
+    content-visibility: auto;
+    contain-intrinsic-size: 420px;
+  }
+}
+
 .report-card,
 .metric-card,
 .product-report-card,
