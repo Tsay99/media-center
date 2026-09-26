@@ -5,6 +5,8 @@ description: Проектный workflow для безопасной разра�
 
 # Медиа Центр — project skill
 
+Перед работой прочитай WORKFLOW.md. Он является единственным полным источником процесса и контекста; ROADMAP.md определяет приоритеты.
+
 Работай по цепочке:
 
 ```text
@@ -33,4 +35,4 @@ refactor(ui): extract shared page header
 test(distribution): cover reels limits
 ```
 
-Подробные команды и роли агентов находятся в `AGENTS.md` и `VIBE_CODING.md`.
+Полные команды и роли агентов находятся в `WORKFLOW.md`; `AGENTS.md` содержит ограничения, а `VIBE_CODING.md` — краткую шпаргалку.
