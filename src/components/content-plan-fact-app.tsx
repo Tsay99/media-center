@@ -57,6 +57,22 @@ function DeferredRender({ children, fallback, className = "" }: { children: Reac
   return <div ref={hostRef} className={className}>{shouldRender ? children : fallback}</div>;
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error("Превышено время ожидания данных")), timeoutMs);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 const ReportCharts = dynamic(() => import("./ui/report-charts").then((module) => module.ReportCharts), { ssr: false, loading: () => <ChartPlaceholder /> });
 const WorkloadRadarCharts = dynamic(() => import("./ui/report-charts").then((module) => module.WorkloadRadarCharts), { ssr: false, loading: () => <ChartPlaceholder /> });
 const VisualSiteBuilder = dynamic(() => import("./visual-site-builder"), { ssr: false, loading: () => <div className="grid min-h-80 place-items-center rounded-2xl border border-blue-100 bg-white text-sm font-semibold text-blue-700 shadow-sm">Загружаем конструктор…</div> });
@@ -379,6 +395,7 @@ export default function ContentPlanFactApp() {
   const [state, setState] = useState<AppState>(() => cloneDemoState());
   const [hydrated, setHydrated] = useState(false);
   const [authHydrated, setAuthHydrated] = useState(false);
+  const [dataHydrated, setDataHydrated] = useState(false);
   const [role, setRole] = useState<UserRole>("guest");
   const [syncState, setSyncState] = useState<SyncState>(isSupabaseConfigured ? "loading" : "local");
   const cloudLoadedRef = useRef(false);
@@ -415,7 +432,9 @@ export default function ContentPlanFactApp() {
         window.sessionStorage.setItem(AUTH_STORAGE_KEY, "guest");
         setView("dashboard");
         setSyncState("local");
+        cloudLoadedRef.current = true;
         setAuthHydrated(true);
+        setDataHydrated(true);
         return;
       }
 
@@ -425,8 +444,8 @@ export default function ContentPlanFactApp() {
       setSyncState("loading");
       setAuthHydrated(true);
 
-      const sessionPromise = getWorkspaceSession();
-      const cloudPromise = loadWorkspaceState();
+      const sessionPromise = withTimeout(getWorkspaceSession(), 8000);
+      const cloudPromise = withTimeout(loadWorkspaceState(), 8000);
 
       try {
         const session = await sessionPromise;
@@ -451,11 +470,13 @@ export default function ContentPlanFactApp() {
           if (cloudState) setState(normalizeState(cloudState));
           cloudLoadedRef.current = true;
           setSyncState(cloudState ? "synced" : "loading");
+          setDataHydrated(true);
         }
       } catch {
         if (!cancelled) {
           cloudLoadedRef.current = true;
           setSyncState("error");
+          setDataHydrated(true);
         }
       }
     }
@@ -786,7 +807,7 @@ function markPlannedRangeAsPublished(startDate: string, endDate: string, platfor
   function deletePublication(publicationId: string) { const target = state.publications.find((publication) => publication.id === publicationId); if (!target) return; setState((previous) => { const publications = previous.publications.filter((item) => item.id !== publicationId); const hasOtherPublication = publications.some((publication) => publication.contentId === target.contentId); return { ...previous, publications, content: previous.content.map((item) => item.id === target.contentId && !hasOtherPublication ? { ...item, status: "approval", actualPublishDate: undefined, updatedAt: TODAY } : item) }; }); notify("Публикация снята с факта"); }
   function exportReport() { window.print(); notify("Откройте диалог печати и выберите «Сохранить как PDF»"); }
 
-  if (!authHydrated) return <AuthLoadingScreen />;
+  if (!authHydrated || !dataHydrated) return <AuthLoadingScreen />;
   const guestViewIds = siteSettings.guestViews.length ? siteSettings.guestViews : ["dashboard"];
   const visibleNavItems = role !== "owner" ? NAV_ITEMS.filter((item) => GUEST_NAV_ORDER.includes(item.id) && guestViewIds.includes(item.id)) : NAV_ITEMS;
   const guestTourViews = visibleNavItems.map((item) => item.id).filter((id): id is "dashboard" | "calendar" | "load" => id === "dashboard" || id === "calendar" || id === "load");
